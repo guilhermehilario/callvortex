@@ -19,6 +19,7 @@ Situação atual do **Discord Clone** (atualizado em 16/08/2026).
   - 🎙️ **Seletor de microfone**: escolher o dispositivo de áudio, trocar ao vivo durante a chamada e testar (barra de nível) antes de entrar
   - 🔊 **Volume individual por participante**: lista de integrantes com slider de volume para cada um (guardado entre chamadas)
   - 📶 **Sinal de rede por participante**: barras de sinal (1–4, estilo Discord) medidas via WebRTC `getStats` (RTT + perda de pacotes)
+  - 🔁 **Volta automática à sala**: se fechou o app dentro de um canal de voz e reabriu em até **20 minutos**, ele entra de novo sozinho (sessão ativa)
 - 🗑️ Excluir mensagens, canais e servidores (dono)
 - 📦 `.exe` portátil para distribuir (sem instalação)
 

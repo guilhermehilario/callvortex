@@ -3,6 +3,7 @@ import { uploadAvatar } from '../lib/api'
 import type { Channel } from '../lib/types'
 import { useApp } from '../lib/useApp'
 import Avatar from './Avatar'
+import SignalBars from './SignalBars'
 
 export default function ChannelSidebar(): React.JSX.Element {
   const {
@@ -13,6 +14,9 @@ export default function ChannelSidebar(): React.JSX.Element {
     profile,
     onlineUsers,
     voiceChannelId,
+    voiceRoster,
+    speakingUsers,
+    peerSignals,
     selectChannel,
     selectDm,
     openModal,
@@ -133,34 +137,52 @@ export default function ChannelSidebar(): React.JSX.Element {
                   </button>
                 )}
               </div>
-              {voiceChannels.map((c) => {
-                const active = screen.channelId === c.id
-                const joined = voiceChannelId === c.id
-                return (
-                  <div
-                    key={c.id}
-                    className={`channel-item voice-item ${active ? 'active' : ''} ${joined ? 'joined' : ''}`}
-                    onClick={() => handleVoiceClick(c)}
-                    title="Abrir canal de voz"
-                  >
-                    <span className="voice-icon">🔊</span>
-                    <span className="channel-name">{c.name}</span>
-                    {joined && <span className="voice-live" title="Você está neste canal">●</span>}
-                    {isOwner && channels.length > 1 && (
-                      <button
-                        className="channel-delete"
-                        title="Excluir canal de voz"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          if (window.confirm(`Excluir o canal de voz ${c.name}?`)) void handleDeleteChannel(c.id)
-                        }}
-                      >
-                        ✕
-                      </button>
+    {voiceChannels.map((c) => {
+      const active = screen.channelId === c.id
+      const joined = voiceChannelId === c.id
+      return (
+        <div key={c.id} className="voice-channel-block">
+          <div
+            className={`channel-item voice-item ${active ? 'active' : ''} ${joined ? 'joined' : ''}`}
+            onClick={() => handleVoiceClick(c)}
+            title="Abrir canal de voz"
+          >
+            <span className="voice-icon">🔊</span>
+            <span className="channel-name">{c.name}</span>
+            {joined && <span className="voice-live" title="Você está neste canal">●</span>}
+            {isOwner && channels.length > 1 && (
+              <button
+                className="channel-delete"
+                title="Excluir canal de voz"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (window.confirm(`Excluir o canal de voz ${c.name}?`)) void handleDeleteChannel(c.id)
+                }}
+              >
+                ✕
+              </button>
+            )}
+          </div>
+          {joined && voiceRoster.length > 0 && (
+            <div className="voice-channel-members">
+              {voiceRoster.map((u) => (
+                <div key={u.userId} className={`voice-channel-member ${speakingUsers.has(u.userId) ? 'speaking' : ''}`} title={u.username}>
+                  <span className="voice-channel-member-avatar">
+                    <Avatar name={u.username} color={u.avatar_color} size={24} url={u.avatar_url} />
+                    {u.userId !== profile?.id && (
+                      <span className="voice-channel-member-signal">
+                        <SignalBars quality={peerSignals[u.userId] ?? 0} small />
+                      </span>
                     )}
-                  </div>
-                )
-              })}
+                  </span>
+                  <span className="voice-channel-member-name">{u.username}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )
+    })}
             </div>
           )}
         </div>

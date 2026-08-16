@@ -78,6 +78,41 @@ interface AppContextValue {
 }
 
 const MIC_STORAGE_KEY = 'selected-mic-id'
+const VOICE_SESSION_KEY = 'voice-session'
+const VOICE_REJOIN_MS = 20 * 60 * 1000 // 20 minutos
+
+interface VoiceSession {
+  channelId: string
+  serverId: string
+  at: number
+}
+
+function readVoiceSession(): VoiceSession | null {
+  try {
+    const raw = localStorage.getItem(VOICE_SESSION_KEY)
+    if (!raw) return null
+    const s = JSON.parse(raw) as VoiceSession
+    return s && typeof s.channelId === 'string' && typeof s.serverId === 'string' ? s : null
+  } catch {
+    return null
+  }
+}
+
+function writeVoiceSession(s: VoiceSession): void {
+  try {
+    localStorage.setItem(VOICE_SESSION_KEY, JSON.stringify(s))
+  } catch {
+    // armazenamento indisponível — segue sem voltar automaticamente
+  }
+}
+
+function clearVoiceSession(): void {
+  try {
+    localStorage.removeItem(VOICE_SESSION_KEY)
+  } catch {
+    // ignore
+  }
+}
 
 const AppContext = createContext<AppContextValue | null>(null)
 
@@ -91,6 +126,7 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
   const [authState, setAuthState] = useState<AuthState>('loading')
   const [profile, setProfile] = useState<Profile | null>(null)
   const [savedCredentials, setSavedCredentials] = useState<SavedCredentials | null>(null)
+  const [dataReady, setDataReady] = useState(false)
   const [servers, setServers] = useState<Server[]>([])
   const [dms, setDms] = useState<DmThreadWithOther[]>([])
   const [channels, setChannels] = useState<Channel[]>([])
@@ -170,6 +206,7 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
         setVoiceInputLevel(0)
         setPeerSignals({})
         setScreen(null)
+        setDataReady(false)
       }
     })
     return () => sub.subscription.unsubscribe()
@@ -183,6 +220,7 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
     let cancelled = false
     const load = async (): Promise<void> => {
       try {
+        setDataReady(false)
         const supabase = getSupabase()
         const {
           data: { user }
@@ -195,6 +233,7 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
         if (cancelled) return
         setServers(s)
         setDms(d)
+        setDataReady(true)
       } catch (e) {
         notify('error', e instanceof Error ? e.message : 'Erro ao carregar dados')
       }
@@ -205,18 +244,7 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
     }
   }, [authState, notify])
 
-  // ------------------------------------------------------------
-  // Navegação inicial automática
-  // ------------------------------------------------------------
-  useEffect(() => {
-    if (authState !== 'signedIn' || screen) return
-    if (servers.length > 0) {
-      void selectServer(servers[0].id)
-    } else {
-      setScreen({ type: 'dm', threadId: null })
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authState, servers, screen])
+
 
   // ------------------------------------------------------------
   // Presença (quem está online)
@@ -411,6 +439,44 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
   const selectDm = useCallback((threadId: string | null) => {
     setScreen({ type: 'dm', threadId })
   }, [])
+
+  // ------------------------------------------------------------
+  // Navegação inicial automática
+  // Se o usuário estava num canal de voz e saiu há menos de 20 minutos,
+  // volta automaticamente para a sala (se a sessão ainda estiver ativa).
+  // ------------------------------------------------------------
+  useEffect(() => {
+    if (authState !== 'signedIn' || !dataReady || screen || !profile) return
+    if (servers.length === 0) {
+      setScreen({ type: 'dm', threadId: null })
+      return
+    }
+    const saved = readVoiceSession()
+    const recent = saved && Date.now() - saved.at < VOICE_REJOIN_MS
+    const server = recent && saved ? servers.find((s) => s.id === saved.serverId) : undefined
+    if (server && saved) {
+      void (async () => {
+        try {
+          const chs = await api.fetchChannels(server.id)
+          const ch = chs.find((c) => c.id === saved.channelId && c.type === 'voice')
+          if (!ch) throw new Error('canal de voz não existe mais')
+          setChannels(chs)
+          setScreen({ type: 'server', serverId: server.id, channelId: ch.id })
+          await voiceManagerRef.current!.join(ch.id, profile, selectedMicId)
+          setVoiceChannelId(ch.id)
+          setVoiceMuted(false)
+          setVoiceDeafened(false)
+          notify('success', 'Você voltou ao canal de voz!')
+        } catch {
+          // não conseguiu voltar (canal excluído, sem permissão de microfone…) —
+          // segue para o servidor normalmente
+          void selectServer(servers[0].id)
+        }
+      })()
+    } else {
+      void selectServer(servers[0].id)
+    }
+  }, [authState, dataReady, screen, servers, profile, selectServer, notify])
 
   const openModal = useCallback((m: Exclude<ModalType, null>) => setModal(m), [])
   const closeModal = useCallback(() => setModal(null), [])
@@ -624,17 +690,20 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
     async (channelId: string) => {
       if (!profile) return
       if (voiceManagerRef.current?.joinedChannelId === channelId) return
+      const serverId = screen?.type === 'server' ? screen.serverId : null
       try {
         await voiceManagerRef.current!.join(channelId, profile, selectedMicId)
         setVoiceChannelId(channelId)
         setVoiceMuted(false)
         setVoiceDeafened(false)
+        // guarda a sala para voltar automaticamente (se fechar o app)
+        if (serverId) writeVoiceSession({ channelId, serverId, at: Date.now() })
         notify('success', 'Você entrou no canal de voz!')
       } catch (e) {
         notify('error', e instanceof Error ? e.message : 'Erro ao entrar no canal de voz')
       }
     },
-    [profile, selectedMicId, notify]
+    [profile, selectedMicId, screen, notify]
   )
 
   const leaveVoice = useCallback(async () => {
@@ -644,7 +713,19 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
     setSpeakingUsers(new Set())
     setVoiceInputLevel(0)
     setPeerSignals({})
+    clearVoiceSession()
   }, [])
+
+  // mantém o horário da sessão de voz fresco enquanto estiver no canal
+  // (assim "saiu há menos de 20 min" vale a partir do fechamento do app)
+  useEffect(() => {
+    if (!voiceChannelId) return
+    const iv = setInterval(() => {
+      const s = readVoiceSession()
+      if (s && s.channelId === voiceChannelId) writeVoiceSession({ ...s, at: Date.now() })
+    }, 60 * 1000)
+    return () => clearInterval(iv)
+  }, [voiceChannelId])
 
   const toggleVoiceMute = useCallback(() => {
     setVoiceMuted((prev) => {
