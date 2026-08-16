@@ -2,6 +2,9 @@ import { app, shell, BrowserWindow, ipcMain, safeStorage } from 'electron'
 import { join } from 'path'
 import { readFile, writeFile, rm } from 'fs/promises'
 
+// O áudio (WebRTC + processamento) precisa rodar sem exigir clique prévio
+app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required')
+
 // ---------------------------------------------------------------------------
 // Credenciais lembradas ("Lembrar de mim")
 // Salvas criptografadas com safeStorage (DPAPI no Windows / Keychain no macOS)

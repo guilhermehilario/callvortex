@@ -48,6 +48,125 @@ function audioConstraints(deviceId?: string | null): MediaTrackConstraints {
 }
 
 /**
+ * Processador de áudio (AudioWorklet) carregado via blob: — roda no thread
+ * de áudio do navegador, em tempo real. Faz:
+ *  1. Supressão de ruído por subtração espectral (com piso de ruído
+ *     estimado dinamicamente e suavização do ganho);
+ *  2. Corte de graves/rumble (bins abaixo de ~150 Hz);
+ *  3. AGC leve (normaliza o volume com suavização).
+ */
+const NOISE_WORKLET_SOURCE = `
+class NoiseSuppressor extends AudioWorkletProcessor {
+  constructor() {
+    super()
+    this.N = 256
+    this.H = 128
+    this.buf = new Float32Array(this.N)
+    this.out = new Float32Array(this.N)
+    this.win = new Float32Array(this.N)
+    for (let i = 0; i < this.N; i++) this.win[i] = 0.5 * (1 - Math.cos((2 * Math.PI * i) / (this.N - 1)))
+    this.re = new Float32Array(this.N)
+    this.im = new Float32Array(this.N)
+    this.noise = new Float32Array(this.N / 2 + 1)
+    this.noise.fill(1e-4)
+    this.prevMag = new Float32Array(this.N / 2 + 1)
+    this.gain = new Float32Array(this.N / 2 + 1)
+    this.gain.fill(1)
+    this.rms = 1e-4
+    this.agc = 1
+  }
+  process(inputs, outputs) {
+    const input = inputs[0]
+    const output = outputs[0]
+    if (!input || !input[0] || !output || !output[0]) return true
+    const x = input[0]
+    const y = output[0]
+    const N = this.N
+    const H = this.H
+    for (let i = 0; i < N - H; i++) this.buf[i] = this.buf[i + H]
+    for (let i = 0; i < H; i++) this.buf[i + N - H] = x[i]
+    for (let i = 0; i < N; i++) {
+      this.re[i] = this.buf[i] * this.win[i]
+      this.im[i] = 0
+    }
+    this.fft(this.re, this.im, false)
+    const half = N / 2
+    for (let i = 0; i <= half; i++) {
+      const mag = Math.sqrt(this.re[i] * this.re[i] + this.im[i] * this.im[i])
+      const sm = 0.8 * this.prevMag[i] + 0.2 * mag
+      this.prevMag[i] = sm
+      const n = this.noise[i]
+      if (sm < n) this.noise[i] = n * 0.92 + sm * 0.08
+      else this.noise[i] = Math.min(n * 1.0008, sm * 1.5)
+      // Filtro de Wiener suave: ganho por SNR com piso — remove ruído sem
+      // criar os artefatos "metalizados" da subtração espectral dura
+      const snr = Math.max((sm - n) / Math.max(n, 1e-6), 0)
+      const g = Math.max(snr / (snr + 1), 0.15)
+      // suavização forte entre quadros (menos shimmer/musical noise)
+      const gs = 0.9 * this.gain[i] + 0.1 * g
+      this.gain[i] = gs
+      let g2 = gs
+      if (i === 0) g2 = 0
+      else if (i === 1) g2 *= 0.25
+      this.re[i] *= g2
+      this.im[i] *= g2
+    }
+    this.fft(this.re, this.im, true)
+    let rms = 0
+    for (let i = 0; i < N; i++) rms += this.re[i] * this.re[i]
+    rms = Math.sqrt(rms / N)
+    this.rms = 0.92 * this.rms + 0.08 * (rms + 1e-6)
+    let agc = 0.13 / this.rms
+    if (agc > 2) agc = 2
+    else if (agc < 0.5) agc = 0.5
+    this.agc = 0.95 * this.agc + 0.05 * agc
+    for (let i = 0; i < N; i++) this.out[i] += this.re[i] * this.win[i] * this.agc
+    for (let i = 0; i < H; i++) y[i] = this.out[i]
+    for (let i = 0; i < N - H; i++) this.out[i] = this.out[i + H]
+    for (let i = N - H; i < N; i++) this.out[i] = 0
+    return true
+  }
+  fft(re, im, inverse) {
+    const n = re.length
+    for (let i = 1, j = 0; i < n; i++) {
+      let bit = n >> 1
+      for (; j & bit; bit >>= 1) j ^= bit
+      j ^= bit
+      if (i < j) {
+        let t = re[i]; re[i] = re[j]; re[j] = t
+        t = im[i]; im[i] = im[j]; im[j] = t
+      }
+    }
+    for (let len = 2; len <= n; len <<= 1) {
+      const ang = ((2 * Math.PI) / len) * (inverse ? 1 : -1)
+      const wRe = Math.cos(ang)
+      const wIm = Math.sin(ang)
+      for (let i = 0; i < n; i += len) {
+        let curRe = 1
+        let curIm = 0
+        const half = len >> 1
+        for (let k = 0; k < half; k++) {
+          const uRe = re[i + k]
+          const uIm = im[i + k]
+          const vRe = re[i + k + half] * curRe - im[i + k + half] * curIm
+          const vIm = re[i + k + half] * curIm + im[i + k + half] * curRe
+          re[i + k] = uRe + vRe
+          im[i + k] = uIm + vIm
+          re[i + k + half] = uRe - vRe
+          im[i + k + half] = uIm - vIm
+          const nRe = curRe * wRe - curIm * wIm
+          curIm = curRe * wIm + curIm * wRe
+          curRe = nRe
+        }
+      }
+    }
+    if (inverse) for (let i = 0; i < n; i++) { re[i] /= n; im[i] /= n }
+  }
+}
+registerProcessor('noise-suppressor', NoiseSuppressor)
+`
+
+/**
  * Voz por canal usando WebRTC em malha (mesh): cada participante se conecta
  * diretamente aos outros. A sinalização (offer/answer/ICE) e a lista de quem
  * está no canal usam o Realtime do Supabase. O áudio nunca passa pelo Supabase.
@@ -72,6 +191,12 @@ export class VoiceManager {
   // qualidade do sinal (0-4) por participante, medida via getStats
   private peerSignals = new Map<string, number>()
   private statsInterval: number | null = null
+  // supressão de ruído / melhoria de qualidade (AudioWorklet)
+  private noiseSuppression = true
+  private audioCtx: AudioContext | null = null
+  private workletNode: AudioWorkletNode | null = null
+  private processedStream: MediaStream | null = null
+  private noiseModuleUrl: string | null = null
 
   onRoster: ((users: VoicePeerInfo[]) => void) | null = null
   onSpeaking: ((userId: string, speaking: boolean) => void) | null = null
@@ -115,6 +240,11 @@ export class VoiceManager {
     this.me = me
     this.localStream = stream
     this.channelId = channelId
+
+    // aplica supressão de ruído antes de entrar (se falhar, segue com o mic cru)
+    if (this.noiseSuppression) {
+      await this.startProcessing()
+    }
 
     const supabase = getSupabase()
     const ch = supabase.channel(`voice:${channelId}`, {
@@ -181,6 +311,7 @@ export class VoiceManager {
     for (const peerId of [...this.pcs.keys()]) this.closePeer(peerId)
     for (const cleanup of this.detectorCleanups.values()) cleanup()
     this.detectorCleanups.clear()
+    await this.stopProcessing()
     this.localStream?.getTracks().forEach((t) => t.stop())
     this.localStream = null
     this.me = null
@@ -214,18 +345,12 @@ export class VoiceManager {
       throw new Error('Não foi possível acessar este microfone. Verifique se ele está conectado e as permissões de áudio do sistema.')
     }
 
-    const newTrack = stream.getAudioTracks()[0]
-    for (const pc of this.pcs.values()) {
-      for (const sender of pc.getSenders()) {
-        if (sender.track?.kind === 'audio') {
-          void sender.replaceTrack(newTrack).catch(() => undefined)
-        }
-      }
-    }
-
     // encerra o stream antigo e passa a usar o novo
     this.localStream?.getTracks().forEach((t) => t.stop())
     this.localStream = stream
+
+    // reconstrói a cadeia (processada ou crua) e troca a trilha enviada
+    await this.rebuildSendTrack()
 
     // reinicia o detector de fala com o novo stream
     const cleanup = this.detectorCleanups.get('me')
@@ -234,9 +359,6 @@ export class VoiceManager {
       this.detectorCleanups.delete('me')
     }
     this.attachSpeakingDetector('me', stream, (s) => this.setSpeaking(this.me!.id, s))
-
-    // mantém estado de mudo/surdo no novo microfone
-    this.applyLocalTrackState()
   }
 
   /**
@@ -267,6 +389,96 @@ export class VoiceManager {
     this.localStream?.getAudioTracks().forEach((t) => {
       t.enabled = enabled
     })
+    this.processedStream?.getAudioTracks().forEach((t) => {
+      t.enabled = enabled
+    })
+  }
+
+  // ------------------------------------------------------------
+  // Supressão de ruído / melhoria de qualidade
+  // ------------------------------------------------------------
+  /** Liga/desliga a redução de ruído; se estiver numa chamada, troca na hora. */
+  async setNoiseSuppression(enabled: boolean): Promise<void> {
+    this.noiseSuppression = enabled
+    if (!this.channelId || !this.localStream) return // aplica no próximo join
+    await this.rebuildSendTrack()
+  }
+
+  /** A trilha que vai para os pares: a processada ou o mic cru. */
+  private getSendTrack(): MediaStreamTrack | null {
+    if (this.noiseSuppression && this.processedStream) {
+      const t = this.processedStream.getAudioTracks()[0]
+      if (t) return t
+    }
+    return this.localStream?.getAudioTracks()[0] ?? null
+  }
+
+  /** (Re)constrói a cadeia de processamento e troca a trilha enviada. */
+  private async rebuildSendTrack(): Promise<void> {
+    await this.stopProcessing()
+    if (this.noiseSuppression) {
+      const ok = await this.startProcessing()
+      if (!ok) {
+        this.onError?.('Não foi possível ativar a redução de ruído neste dispositivo — usando áudio normal.')
+      }
+    }
+    const track = this.getSendTrack()
+    if (!track) return
+    for (const pc of this.pcs.values()) {
+      for (const sender of pc.getSenders()) {
+        if (sender.track?.kind === 'audio') void sender.replaceTrack(track).catch(() => undefined)
+      }
+    }
+    this.applyLocalTrackState()
+  }
+
+  private async startProcessing(): Promise<boolean> {
+    try {
+      const src = this.localStream
+      if (!src) return false
+      const ctx = new AudioContext()
+      this.audioCtx = ctx
+      if (ctx.state === 'suspended') void ctx.resume()
+      await ctx.audioWorklet.addModule(this.getNoiseModuleUrl())
+      const node = new AudioWorkletNode(ctx, 'noise-suppressor', {
+        numberOfInputs: 1,
+        numberOfOutputs: 1,
+        outputChannelCount: [1]
+      })
+      this.workletNode = node
+      const dest = ctx.createMediaStreamDestination()
+      ctx.createMediaStreamSource(src).connect(node)
+      node.connect(dest)
+      this.processedStream = dest.stream
+      return true
+    } catch {
+      await this.stopProcessing().catch(() => undefined)
+      return false
+    }
+  }
+
+  private async stopProcessing(): Promise<void> {
+    this.processedStream?.getTracks().forEach((t) => t.stop())
+    this.processedStream = null
+    if (this.workletNode) {
+      try {
+        this.workletNode.disconnect()
+      } catch {
+        // ignore
+      }
+      this.workletNode = null
+    }
+    if (this.audioCtx) {
+      void this.audioCtx.close().catch(() => undefined)
+      this.audioCtx = null
+    }
+  }
+
+  private getNoiseModuleUrl(): string {
+    if (this.noiseModuleUrl) return this.noiseModuleUrl
+    const blob = new Blob([NOISE_WORKLET_SOURCE], { type: 'application/javascript' })
+    this.noiseModuleUrl = URL.createObjectURL(blob)
+    return this.noiseModuleUrl
   }
 
   // ------------------------------------------------------------
@@ -293,7 +505,8 @@ export class VoiceManager {
       }
     }
 
-    this.localStream?.getTracks().forEach((t) => pc.addTrack(t, this.localStream as MediaStream))
+    const track = this.getSendTrack()
+    if (track) pc.addTrack(track, this.localStream as MediaStream)
     return pc
   }
 

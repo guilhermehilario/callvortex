@@ -69,6 +69,8 @@ interface AppContextValue {
   peerVolumes: Record<string, number>
   setPeerVolume: (userId: string, volume: number) => void
   peerSignals: Record<string, number>
+  noiseSuppression: boolean
+  setNoiseSuppression: (enabled: boolean) => Promise<void>
   joinVoice: (channelId: string) => Promise<void>
   leaveVoice: () => Promise<void>
   toggleVoiceMute: () => void
@@ -79,6 +81,7 @@ interface AppContextValue {
 }
 
 const MIC_STORAGE_KEY = 'selected-mic-id'
+const NOISE_SUPPRESSION_KEY = 'noise-suppression'
 const VOICE_SESSION_KEY = 'voice-session'
 const VOICE_REJOIN_MS = 20 * 60 * 1000 // 20 minutos
 
@@ -141,6 +144,10 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
   const [voiceInputLevel, setVoiceInputLevel] = useState(0)
   const [microphones, setMicrophones] = useState<MediaDeviceInfo[]>([])
   const [selectedMicId, setSelectedMicId] = useState<string | null>(() => localStorage.getItem(MIC_STORAGE_KEY))
+  const [noiseSuppression, setNoiseSuppressionState] = useState<boolean>(() => {
+    const v = localStorage.getItem(NOISE_SUPPRESSION_KEY)
+    return v === null ? true : v === '1'
+  })
   const [peerSignals, setPeerSignals] = useState<Record<string, number>>({})
   const profileRef = useRef<Profile | null>(null)
   const prevVoiceRosterRef = useRef<ReadonlySet<string>>(new Set())
@@ -770,6 +777,16 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
     playDeafenSound()
   }, [])
 
+  const setNoiseSuppression = useCallback(async (enabled: boolean) => {
+    setNoiseSuppressionState(enabled)
+    try {
+      localStorage.setItem(NOISE_SUPPRESSION_KEY, enabled ? '1' : '0')
+    } catch {
+      // armazenamento indisponível — segue só em memória
+    }
+    await voiceManagerRef.current?.setNoiseSuppression(enabled)
+  }, [])
+
   const setPeerVolume = useCallback((userId: string, volume: number) => {
     setPeerVolumes((prev) => {
       const next = { ...prev, [userId]: volume }
@@ -827,6 +844,8 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
       peerVolumes,
       setPeerVolume,
       peerSignals,
+      noiseSuppression,
+      setNoiseSuppression,
       joinVoice,
       leaveVoice,
       toggleVoiceMute,
@@ -878,6 +897,8 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
       peerVolumes,
       setPeerVolume,
       peerSignals,
+      noiseSuppression,
+      setNoiseSuppression,
       joinVoice,
       leaveVoice,
       toggleVoiceMute,

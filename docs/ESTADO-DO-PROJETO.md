@@ -17,6 +17,7 @@ Situação atual do **Discord Clone** (atualizado em 16/08/2026).
 - 🔊 Voz por canal: WebRTC em malha (P2P) com STUN + TURN público
   - Mudo 🎤, surdo 🎧, sair 📞, indicador de quem está falando
   - 🎙️ **Seletor de microfone**: escolher o dispositivo de áudio, trocar ao vivo durante a chamada e testar (barra de nível) antes de entrar
+  - 🎛️ **Redução de ruído + melhoria de qualidade**: AudioWorklet com supressão espectral de ruído, corte de graves e ganho automático (toggle no seletor de mic)
   - 🔊 **Volume individual por participante**: lista de integrantes com slider de volume para cada um (guardado entre chamadas)
   - 📶 **Sinal de rede por participante**: barras de sinal (1–4, estilo Discord) medidas via WebRTC `getStats` (RTT + perda de pacotes)
   - 🔁 **Volta automática à sala**: se fechou o app dentro de um canal de voz e reabriu em até **20 minutos**, ele entra de novo sozinho (sessão ativa)

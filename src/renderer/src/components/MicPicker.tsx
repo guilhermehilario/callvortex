@@ -8,7 +8,7 @@ import { useApp } from '../lib/useApp'
  * entrar no canal de voz.
  */
 export default function MicPicker(): React.JSX.Element {
-  const { microphones, selectedMicId, voiceChannelId, voiceInputLevel, loadMicrophones, selectMicrophone } = useApp()
+  const { microphones, selectedMicId, voiceChannelId, voiceInputLevel, noiseSuppression, setNoiseSuppression, loadMicrophones, selectMicrophone } = useApp()
 
   const [testing, setTesting] = useState(false)
   const [testLevel, setTestLevel] = useState(0)
@@ -107,6 +107,15 @@ export default function MicPicker(): React.JSX.Element {
         >
           {testing ? '■ Parar' : 'Testar'}
         </button>
+      </div>
+      <div className="mic-picker-row noise-row">
+        <span className="mic-picker-label">🎛️ Redução de ruído</span>
+        <label className="noise-switch" title={noiseSuppression ? 'Redução de ruído ligada' : 'Redução de ruído desligada'}>
+          <input type="checkbox" checked={noiseSuppression} onChange={(e) => void setNoiseSuppression(e.target.checked)} />
+          <span className="noise-switch-track">
+            <span className="noise-switch-thumb" />
+          </span>
+        </label>
       </div>
       <div className="mic-level" title="Nível do microfone (fale para ver a barra mexer)">
         <div className="mic-level-fill" style={{ width: `${pct}%` }} />
