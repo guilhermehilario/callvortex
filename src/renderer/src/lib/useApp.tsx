@@ -10,6 +10,7 @@ import React, {
 import { getSupabase } from './supabase'
 import * as api from './api'
 import { VoiceManager, getMicrophones } from './voice'
+import { playDeafenSound, playJoinSound, playLeaveSound, playMuteSound } from './sounds'
 import type { Channel, DmThreadWithOther, ModalType, Profile, Screen, Server, ServerEmoji, VoicePeerInfo } from './types'
 
 type AuthState = 'loading' | 'signedOut' | 'signedIn'
@@ -141,6 +142,8 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
   const [microphones, setMicrophones] = useState<MediaDeviceInfo[]>([])
   const [selectedMicId, setSelectedMicId] = useState<string | null>(() => localStorage.getItem(MIC_STORAGE_KEY))
   const [peerSignals, setPeerSignals] = useState<Record<string, number>>({})
+  const profileRef = useRef<Profile | null>(null)
+  const prevVoiceRosterRef = useRef<ReadonlySet<string>>(new Set())
   const [peerVolumes, setPeerVolumes] = useState<Record<string, number>>(() => {
     try {
       const raw = localStorage.getItem('peer-volumes')
@@ -161,6 +164,10 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
     setNotice({ kind, text })
     noticeTimer.current = setTimeout(() => setNotice(null), 5000)
   }, [])
+
+  useEffect(() => {
+    profileRef.current = profile
+  }, [profile])
 
   // ------------------------------------------------------------
   // Credenciais lembradas ("Lembrar de mim")
@@ -466,6 +473,7 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
           setVoiceChannelId(ch.id)
           setVoiceMuted(false)
           setVoiceDeafened(false)
+          playJoinSound()
           notify('success', 'Você voltou ao canal de voz!')
         } catch {
           // não conseguiu voltar (canal excluído, sem permissão de microfone…) —
@@ -626,7 +634,21 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
   useEffect(() => {
     const m = voiceManagerRef.current
     if (!m) return
-    m.onRoster = (users) => setVoiceRoster(users)
+    m.onRoster = (users) => {
+      setVoiceRoster(users)
+      // efeitos sonoros: quem entrou/saiu da sala (exceto eu — o meu som
+      // é tocado em joinVoice/leaveVoice)
+      const meId = profileRef.current?.id
+      const ids = new Set(users.map((u) => u.userId))
+      const prev = prevVoiceRosterRef.current
+      for (const u of users) {
+        if (!prev.has(u.userId) && u.userId !== meId) playJoinSound()
+      }
+      for (const id of prev) {
+        if (!ids.has(id) && id !== meId) playLeaveSound()
+      }
+      prevVoiceRosterRef.current = ids
+    }
     m.onSpeaking = (userId, speaking) => {
       setSpeakingUsers((prev) => {
         const next = new Set(prev)
@@ -698,6 +720,7 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
         setVoiceDeafened(false)
         // guarda a sala para voltar automaticamente (se fechar o app)
         if (serverId) writeVoiceSession({ channelId, serverId, at: Date.now() })
+        playJoinSound()
         notify('success', 'Você entrou no canal de voz!')
       } catch (e) {
         notify('error', e instanceof Error ? e.message : 'Erro ao entrar no canal de voz')
@@ -714,6 +737,8 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
     setVoiceInputLevel(0)
     setPeerSignals({})
     clearVoiceSession()
+    prevVoiceRosterRef.current = new Set()
+    playLeaveSound()
   }, [])
 
   // mantém o horário da sessão de voz fresco enquanto estiver no canal
@@ -733,6 +758,7 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
       voiceManagerRef.current?.setLocalMuted(next)
       return next
     })
+    playMuteSound()
   }, [])
 
   const toggleVoiceDeafen = useCallback(() => {
@@ -741,6 +767,7 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
       voiceManagerRef.current?.setDeafened(next)
       return next
     })
+    playDeafenSound()
   }, [])
 
   const setPeerVolume = useCallback((userId: string, volume: number) => {
