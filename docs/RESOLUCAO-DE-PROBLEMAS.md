@@ -91,7 +91,7 @@ App Control) — o arquivo sai com tamanho errado (ex.: 158 KB em vez de ~90 MB)
 e não pode ser executado.
 
 **Solução adotada:** o projeto agora gera apenas o alvo **portable**
-(`release/Discord Clone 0.1.1.exe`, 87 MB) — que não usa esse passo e funciona.
+(`release/Discord Clone 0.1.2.exe`, 87 MB) — que não usa esse passo e funciona.
 Se precisar do instalador NSIS, adicione a pasta do projeto às exclusões do
 antivírus (exige admin) e rode com o alvo `nsis`.
 

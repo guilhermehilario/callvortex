@@ -1,13 +1,13 @@
 # 🙋 Guia do Amigo — como entrar na sala
 
-Você recebeu o arquivo **`Discord Clone 0.1.1.exe`** do seu amigo.
+Você recebeu o arquivo **`Discord Clone 0.1.2.exe`** do seu amigo.
 Siga estes 3 passos e você estará dentro da sala.
 
 ---
 
 ## Passo 1 — Abrir o app
 
-1. Clique duas vezes no arquivo **`Discord Clone 0.1.1.exe`** que você recebeu
+1. Clique duas vezes no arquivo **`Discord Clone 0.1.2.exe`** que você recebeu
    (não precisa instalar nada — ele roda direto).
 2. Se o Windows reclamar com "Windows protegeu seu computador" (SmartScreen),
    clique em **Mais informações → Executar assim mesmo**. Isso acontece porque

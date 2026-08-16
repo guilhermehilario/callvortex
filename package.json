@@ -1,6 +1,6 @@
 {
-  "name": "discord-clone",
-  "version": "0.1.1",
+  "name": "callmecord",
+  "version": "0.1.2",
   "description": "Clone do Discord para conversar com amigos",
   "main": "out/main/index.js",
   "scripts": {

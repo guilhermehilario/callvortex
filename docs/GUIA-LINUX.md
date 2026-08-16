@@ -58,8 +58,8 @@ O script instala as dependências, roda o build e gera em `release/`:
 
 | Arquivo | O que é | Como instalar/rodar |
 |---|---|---|
-| `Discord Clone-0.1.1.AppImage` | **Portátil** (não instala nada) | `chmod +x arquivo.AppImage && ./arquivo.AppImage` — ou 2 cliques no gerenciador de arquivos |
-| `discord-clone_0.1.1_amd64.deb` | Instalável (Ubuntu/Debian) | `sudo apt install ./discord-clone_0.1.1_amd64.deb` — aparece no menu de apps |
+| `Discord Clone-0.1.2.AppImage` | **Portátil** (não instala nada) | `chmod +x arquivo.AppImage && ./arquivo.AppImage` — ou 2 cliques no gerenciador de arquivos |
+| `discord-clone_0.1.2_amd64.deb` | Instalável (Ubuntu/Debian) | `sudo apt install ./discord-clone_0.1.2_amd64.deb` — aparece no menu de apps |
 
 **Importante para o passo B:**
 - O `.env` deve estar **preenchido com as chaves reais** antes de gerar — elas

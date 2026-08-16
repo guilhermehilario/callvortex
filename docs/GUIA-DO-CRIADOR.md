@@ -40,7 +40,7 @@ npm run dev
 npm run dist
 ```
 
-O arquivo sai em **`release/Discord Clone 0.1.1.exe`** — é o modo **portátil**:
+O arquivo sai em **`release/Discord Clone 0.1.2.exe`** — é o modo **portátil**:
 um único `.exe` que roda sem instalar nada. Basta mandar esse arquivo.
 
 > ⚠️ **Importante:** o `.exe` grava as chaves do Supabase **dentro dele** no
@@ -111,7 +111,7 @@ Combinem quem faz o quê:
 - [ ] `.env` com chaves reais (sem "placeholder")
 - [ ] `supabase/schema.sql` rodado no SQL Editor
 - [ ] `npm run dist` rodado **depois** do `.env` correto
-- [ ] `.exe` novo (`release/Discord Clone 0.1.1.exe`) enviado ao amigo
+- [ ] `.exe` novo (`release/Discord Clone 0.1.2.exe`) enviado ao amigo
 - [ ] (Se bloqueado) Smart App Control desligado no Windows Security
 - [ ] Amigo criou conta
 - [ ] Amigo entrou no servidor pelo código de convite
