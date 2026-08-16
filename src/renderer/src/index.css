@@ -701,29 +701,25 @@ button {
 /* ---------------------------------------------------------- */
 /* Voz (WebRTC)                                                */
 /* ---------------------------------------------------------- */
-.voice-bar {
-  position: fixed;
-  left: 88px;
-  bottom: 64px;
-  width: 300px;
+/* painel "em chamada" na base da sidebar (estilo Discord) */
+.voice-connected-panel {
   background: var(--bg-floating);
-  border-radius: 8px;
-  padding: 10px 12px;
+  border-top: 1px solid var(--border);
+  padding: 8px;
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.voice-connected-main {
+  display: flex;
   align-items: center;
-  gap: 10px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-  z-index: 60;
-}
-.voice-bar-icon {
-  font-size: 18px;
-}
-.voice-bar-text {
-  flex: 1;
+  gap: 8px;
   min-width: 0;
 }
-.voice-bar-title {
+.voice-connected-title {
+  flex: 1;
+  min-width: 0;
   font-size: 13px;
   font-weight: 700;
   color: var(--green);
@@ -731,39 +727,11 @@ button {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.voice-bar-members {
+.voice-connected-controls {
   display: flex;
   align-items: center;
   gap: 4px;
-  margin-top: 4px;
-}
-.voice-bar-avatar {
-  border-radius: 50%;
-  line-height: 0;
-  display: inline-flex;
-  position: relative;
-}
-.voice-bar-avatar.speaking {
-  box-shadow: 0 0 0 2px var(--green);
-  border-radius: 50%;
-}
-.voice-bar-signal {
-  position: absolute;
-  bottom: -6px;
-  right: -2px;
-  background: var(--bg-floating);
-  border-radius: 3px;
-  padding: 1px;
-  line-height: 0;
-}
-.voice-bar-empty {
-  font-size: 11px;
-  color: var(--text-muted);
-}
-.voice-bar-controls {
-  display: flex;
-  align-items: center;
-  gap: 4px;
+  flex-shrink: 0;
 }
 .voice-control {
   width: 32px;
@@ -939,8 +907,8 @@ button {
 }
 
 /* seletor de microfone */
-.voice-bar .mic-picker {
-  flex-basis: 100%;
+.voice-connected-panel .mic-picker {
+  width: 100%;
 }
 .voice-screen-body .mic-picker {
   width: 320px;
@@ -1580,10 +1548,6 @@ button {
   }
   .voice-screen-body {
     padding: 16px;
-  }
-  .voice-bar {
-    left: 80px;
-    width: calc(100vw - 96px);
   }
   .toast {
     left: 80px;

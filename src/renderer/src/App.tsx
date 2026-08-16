@@ -6,7 +6,6 @@ import ChannelSidebar from './components/ChannelSidebar'
 import ChatArea from './components/ChatArea'
 import MemberList from './components/MemberList'
 import Modals from './components/Modals'
-import VoiceBar from './components/VoiceBar'
 
 function SetupScreen(): React.JSX.Element {
   return (
@@ -60,7 +59,6 @@ function MainLayout(): React.JSX.Element {
       <ChannelSidebar />
       <ChatArea />
       {screen?.type === 'server' && <MemberList serverId={screen.serverId} />}
-      <VoiceBar />
       <Toast />
       <Modals />
     </div>

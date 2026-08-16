@@ -3,6 +3,7 @@ import { uploadAvatar } from '../lib/api'
 import type { Channel } from '../lib/types'
 import { useApp } from '../lib/useApp'
 import Avatar from './Avatar'
+import MicPicker from './MicPicker'
 import SignalBars from './SignalBars'
 
 export default function ChannelSidebar(): React.JSX.Element {
@@ -187,6 +188,7 @@ export default function ChannelSidebar(): React.JSX.Element {
           )}
         </div>
 
+        <VoiceConnectedPanel />
         <UserPanel />
       </div>
     )
@@ -228,7 +230,59 @@ export default function ChannelSidebar(): React.JSX.Element {
         </div>
       </div>
 
+      <VoiceConnectedPanel />
       <UserPanel />
+    </div>
+  )
+}
+
+/**
+ * Painel "em chamada" na base da sidebar (estilo Discord): mostra o seu
+ * avatar com os botões de voz ao lado e o microfone selecionado abaixo.
+ * Só aparece enquanto você estiver conectado a um canal de voz.
+ */
+function VoiceConnectedPanel(): React.JSX.Element | null {
+  const {
+    profile,
+    channels,
+    voiceChannelId,
+    voiceMuted,
+    voiceDeafened,
+    leaveVoice,
+    toggleVoiceMute,
+    toggleVoiceDeafen
+  } = useApp()
+  if (!voiceChannelId || !profile) return null
+  const channel = channels.find((c) => c.id === voiceChannelId)
+
+  return (
+    <div className="voice-connected-panel">
+      <div className="voice-connected-main">
+        <Avatar name={profile.username} color={profile.avatar_color} size={32} url={profile.avatar_url} />
+        <div className="voice-connected-title" title={channel?.name ?? 'Canal de voz'}>
+          🔊 {channel?.name ?? 'Canal de voz'}
+        </div>
+        <div className="voice-connected-controls">
+          <button
+            className={`voice-control ${voiceMuted ? 'active' : ''}`}
+            title={voiceMuted ? 'Ativar microfone' : 'Silenciar microfone'}
+            onClick={toggleVoiceMute}
+          >
+            {voiceMuted ? '🔇' : '🎤'}
+          </button>
+          <button
+            className={`voice-control ${voiceDeafened ? 'active' : ''}`}
+            title={voiceDeafened ? 'Ouvir de novo' : 'Ficar surdo'}
+            onClick={toggleVoiceDeafen}
+          >
+            🎧
+          </button>
+          <button className="voice-control leave" title="Sair do canal de voz" onClick={() => void leaveVoice()}>
+            📞
+          </button>
+        </div>
+      </div>
+      <MicPicker />
     </div>
   )
 }
