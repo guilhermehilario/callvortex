@@ -79,6 +79,8 @@ button {
   padding: 32px;
   width: 460px;
   max-width: calc(100vw - 40px);
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
 }
 
@@ -819,6 +821,8 @@ button {
   gap: 8px;
   width: 100%;
   max-width: 420px;
+  max-height: 42vh;
+  overflow-y: auto;
   margin: 12px 0;
 }
 .voice-member {
@@ -940,6 +944,7 @@ button {
 }
 .voice-screen-body .mic-picker {
   width: 320px;
+  max-width: 100%;
   margin-top: 16px;
 }
 .mic-picker {
@@ -1363,6 +1368,8 @@ button {
   padding: 24px;
   width: 420px;
   max-width: calc(100vw - 40px);
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
 }
 .modal-title {
@@ -1464,7 +1471,7 @@ button {
   font-size: 14px;
   z-index: 200;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-  max-width: 480px;
+  max-width: min(480px, calc(100vw - 110px));
 }
 .toast-error {
   background: var(--red);
@@ -1473,4 +1480,82 @@ button {
 .toast-success {
   background: var(--green);
   color: #fff;
+}
+
+/* ---------------------------------------------------------- */
+/* Responsividade                                               */
+/* ---------------------------------------------------------- */
+/* itens do menu do servidor não estouram a sidebar estreita */
+.server-menu-item {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* telas médias: colunas laterais um pouco mais estreitas */
+@media (max-width: 1150px) {
+  .sidebar {
+    width: 210px;
+  }
+  .member-list {
+    width: 200px;
+  }
+}
+
+/* telas estreitas: esconde a lista de membros (igual ao Discord) e
+   dá mais espaço para o chat */
+@media (max-width: 960px) {
+  .member-list {
+    display: none;
+  }
+  .sidebar {
+    width: 190px;
+  }
+}
+
+/* janelas bem estreitas: sidebar mínima, emoji panel com menos colunas */
+@media (max-width: 800px) {
+  .sidebar {
+    width: 170px;
+  }
+  .emoji-panel {
+    grid-template-columns: repeat(6, 1fr);
+  }
+  .chat-header,
+  .chat-messages {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .chat-input-area {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .voice-screen-body {
+    padding: 16px;
+  }
+  .voice-bar {
+    left: 80px;
+    width: calc(100vw - 96px);
+  }
+  .toast {
+    left: 80px;
+    max-width: calc(100vw - 96px);
+  }
+}
+
+/* janelas baixas: modais e telas centrais rolam em vez de cortar */
+@media (max-height: 640px) {
+  .voice-screen-body {
+    justify-content: flex-start;
+    padding-top: 24px;
+  }
+  .voice-screen-icon {
+    font-size: 44px;
+  }
+}
+
+@media (max-height: 560px) {
+  .voice-members {
+    max-height: 30vh;
+  }
 }

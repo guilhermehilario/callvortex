@@ -41,9 +41,21 @@
       "output": "release"
     },
     "win": {
+      "icon": "build/icon.png",
       "target": [
         "portable"
       ]
+    },
+    "linux": {
+      "icon": "build/icon.png",
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Network",
+      "maintainer": "Discord Clone",
+      "synopsis": "Clone do Discord para conversar com amigos",
+      "description": "App de conversa por texto e voz (WebRTC) para grupos de amigos, usando Supabase."
     }
   }
 }

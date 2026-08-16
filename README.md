@@ -63,11 +63,13 @@ Gera um instalador e uma versão portátil na pasta `release/`. Seus amigos prec
 - **`docs/GUIA-RAPIDO.md`** — ⭐ do zero até conversar com o amigo (comece aqui)
 - **`docs/ESTADO-DO-PROJETO.md`** — o que está implementado e verificado
 - **`docs/RESOLUCAO-DE-PROBLEMAS.md`** — todos os erros já encontrados e como resolver
+- **`docs/DESATIVAR-CONFIRMACAO-EMAIL.md`** — passo a passo (4 passos) para desligar a confirmação de e-mail e resolver o erro "email rate limit exceeded" ao criar conta
 - **`CONFIGURACAO.md`** — onde achar as chaves do Supabase e preencher o `.env`
 - **`docs/COMO-FUNCIONA.md`** — análise da arquitetura (nuvem vs P2P, papel do criador/host)
 - **`docs/GUIA-DO-CRIADOR.md`** — passo a passo para você criar a sala e enviar o `.exe` ao amigo
 - **`docs/GUIA-DO-AMIGO.md`** — o que o amigo precisa fazer (abrir o `.exe`, criar conta, entrar pelo código)
 - **`docs/SELF-HOSTED.md`** — opção avançada: sua máquina como servidor de verdade (Docker/LAN/túnel)
+- **`docs/GUIA-LINUX.md`** — 🐧 rodar ou gerar pacotes (`.AppImage`/`.deb`) no Ubuntu/Debian (use o `rodar-linux.sh`)
 
 ## Estrutura
 

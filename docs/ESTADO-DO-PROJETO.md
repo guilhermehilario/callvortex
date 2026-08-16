@@ -48,7 +48,8 @@ Situação atual do **Discord Clone** (atualizado em 16/08/2026).
 - [ ] **Assinar o `.exe`** com certificado de código (elimina o bloqueio do
       Smart App Control em qualquer máquina)
 - [ ] **TURN próprio** para voz em produção (o atual é público/gratuito)
-- [ ] Ícone personalizado do app (hoje usa o padrão do Electron)
+- [x] **Ícone personalizado** (gerado em `build/icon.png` pelo
+      `scripts/generate-icon.js` — sem dependências, roda em qualquer SO)
 - [ ] Atualizações automáticas (auto-update) para os amigos
 - [ ] Se quiser que sua máquina seja o servidor: ver `SELF-HOSTED.md`
 - [ ] `COMO-FUNCIONA.md` aguarda atualização da nota sobre TURN (arquivo estava

@@ -148,7 +148,8 @@ e-mail de confirmação — tentativas repetidas estouram o limite (HTTP 429,
 erro `over_email_send_rate_limit`).
 
 **Solução recomendada — desativar a confirmação de e-mail** (ideal para app
-de amigos, sem e-mail de verificação):
+de amigos, sem e-mail de verificação). Passo a passo completo em
+`docs/DESATIVAR-CONFIRMACAO-EMAIL.md` — resumo:
 1. Painel do Supabase → **Authentication** → **Providers** (ou *Sign In /
    Providers*) → seção **Email**.
 2. Desligue o toggle **"Confirm email"** → **Save**.

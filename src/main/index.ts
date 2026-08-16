@@ -54,12 +54,13 @@ function createWindow(): void {
   const mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
-    minWidth: 940,
-    minHeight: 600,
+    minWidth: 720,
+    minHeight: 540,
     show: false,
     autoHideMenuBar: true,
     backgroundColor: '#1e1f22',
     title: 'Discord Clone',
+    icon: join(__dirname, '../../build/icon.png'),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
