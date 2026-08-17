@@ -72,7 +72,7 @@ export type Screen =
   | { type: 'dm'; threadId: string | null }
   | { type: 'server'; serverId: string; channelId: string }
 
-export type ModalType = 'create-server' | 'join-server' | 'create-channel' | 'start-dm' | 'manage-emojis' | null
+export type ModalType = 'create-server' | 'join-server' | 'create-channel' | 'rename-channel' | 'start-dm' | 'manage-emojis' | null
 
 export const AVATAR_COLORS = [
   '#5865f2',

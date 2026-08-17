@@ -162,6 +162,15 @@ export async function deleteChannel(channelId: string): Promise<void> {
   if (error) throw err('Erro ao excluir canal', error)
 }
 
+export async function renameChannel(channelId: string, name: string): Promise<void> {
+  const supabase = getSupabase()
+  const { error } = await supabase
+    .from('channels')
+    .update({ name: name.trim().replace(/\s+/g, '-').toLowerCase() })
+    .eq('id', channelId)
+  if (error) throw err('Erro ao renomear canal', error)
+}
+
 // ------------------------------------------------------------
 // MENSAGENS DE CANAL
 // ------------------------------------------------------------

@@ -151,6 +151,53 @@ function CreateChannelModal({ onClose }: { onClose: () => void }): React.JSX.Ele
   )
 }
 
+function RenameChannelModal({ onClose }: { onClose: () => void }): React.JSX.Element | null {
+  const { renamingChannel, handleRenameChannel } = useApp()
+  const [name, setName] = useState(renamingChannel?.name ?? '')
+  const [busy, setBusy] = useState(false)
+  const channel = renamingChannel
+
+  const submit = async (e: React.FormEvent): Promise<void> => {
+    e.preventDefault()
+    if (busy || !channel || name.trim().length < 1 || name.trim() === channel.name) return
+    setBusy(true)
+    await handleRenameChannel(channel.id, name)
+    setBusy(false)
+    onClose()
+  }
+
+  if (!channel) return null
+
+  return (
+    <ModalShell title="Renomear canal" onClose={onClose}>
+      <form onSubmit={submit} className="modal-form">
+        <p className="modal-hint">
+          Escolha um novo nome para {channel.type === 'voice' ? 'o canal de voz' : 'o canal de texto'}. Letras minúsculas e espaços viram hífens.
+        </p>
+        <div className="modal-input-prefix">
+          <span>{channel.type === 'voice' ? '🔊' : '#'}</span>
+          <input
+            className="modal-input"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="novo-nome"
+            maxLength={32}
+            autoFocus
+          />
+        </div>
+        <div className="modal-actions">
+          <button type="button" className="btn-secondary" onClick={onClose}>
+            Cancelar
+          </button>
+          <button type="submit" className="btn-primary" disabled={busy || name.trim().length < 1 || name.trim() === channel.name}>
+            Salvar
+          </button>
+        </div>
+      </form>
+    </ModalShell>
+  )
+}
+
 function StartDmModal({ onClose }: { onClose: () => void }): React.JSX.Element {
   const { selectDm, notify } = useApp()
   const [query, setQuery] = useState('')
@@ -307,6 +354,8 @@ export default function Modals(): React.JSX.Element | null {
       return <JoinServerModal onClose={closeModal} />
     case 'create-channel':
       return <CreateChannelModal onClose={closeModal} />
+    case 'rename-channel':
+      return <RenameChannelModal onClose={closeModal} />
     case 'start-dm':
       return <StartDmModal onClose={closeModal} />
     case 'manage-emojis':

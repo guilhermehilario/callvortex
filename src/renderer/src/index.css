@@ -520,7 +520,6 @@ button {
   background: var(--bg-modifier-hover);
 }
 .voice-live {
-  margin-left: auto;
   font-size: 10px;
   color: var(--green);
   animation: pulse 1.6s ease-in-out infinite;
@@ -539,8 +538,29 @@ button {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.channel-delete {
+.channel-actions {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.channel-edit {
+  opacity: 0;
+  color: var(--text-muted);
+  display: inline-flex;
+  padding: 2px 4px;
+  border-radius: 4px;
+  line-height: 0;
+}
+.channel-item:hover .channel-edit {
+  opacity: 1;
+}
+.channel-edit:hover {
+  color: var(--text-normal);
+  background: var(--bg-modifier-hover);
+}
+.channel-delete {
   opacity: 0;
   color: var(--text-muted);
   font-size: 12px;

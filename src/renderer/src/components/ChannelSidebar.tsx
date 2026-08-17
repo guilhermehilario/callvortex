@@ -3,7 +3,7 @@ import { uploadAvatar } from '../lib/api'
 import type { Channel } from '../lib/types'
 import { useApp } from '../lib/useApp'
 import Avatar from './Avatar'
-import { ActivitiesIcon, BroadcastIcon, ChevronDownIcon, GearIcon, HeadphonesIcon, HeadphonesOffIcon, MicIcon, MicOffIcon, PhoneOffIcon, PowerIcon, RouterIcon, ScreenShareIcon, VideoIcon } from './Icons'
+import { ActivitiesIcon, BroadcastIcon, ChevronDownIcon, GearIcon, HeadphonesIcon, HeadphonesOffIcon, MicIcon, MicOffIcon, PencilIcon, PhoneOffIcon, PowerIcon, RouterIcon, ScreenShareIcon, VideoIcon } from './Icons'
 import MicPicker from './MicPicker'
 import OutputPicker from './OutputPicker'
 import SignalBars from './SignalBars'
@@ -23,6 +23,7 @@ export default function ChannelSidebar(): React.JSX.Element {
     selectChannel,
     selectDm,
     openModal,
+    openRenameChannel,
     handleDeleteChannel,
     handleDeleteServer
   } = useApp()
@@ -111,17 +112,24 @@ export default function ChannelSidebar(): React.JSX.Element {
                 <div key={c.id} className={`channel-item ${active ? 'active' : ''}`} onClick={() => selectChannel(c.id)}>
                   <span className="channel-hash">#</span>
                   <span className="channel-name">{c.name}</span>
-                  {isOwner && channels.length > 1 && (
-                    <button
-                      className="channel-delete"
-                      title="Excluir canal"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        if (window.confirm(`Excluir o canal #${c.name}?`)) void handleDeleteChannel(c.id)
-                      }}
-                    >
-                      ✕
-                    </button>
+                  {isOwner && (
+                    <span className="channel-actions">
+                      <button className="channel-edit" title="Renomear canal" onClick={(e) => { e.stopPropagation(); openRenameChannel(c) }}>
+                        <PencilIcon size={12} />
+                      </button>
+                      {channels.length > 1 && (
+                        <button
+                          className="channel-delete"
+                          title="Excluir canal"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            if (window.confirm(`Excluir o canal #${c.name}?`)) void handleDeleteChannel(c.id)
+                          }}
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </span>
                   )}
                 </div>
               )
@@ -153,17 +161,24 @@ export default function ChannelSidebar(): React.JSX.Element {
             <span className="voice-icon">🔊</span>
             <span className="channel-name">{c.name}</span>
             {joined && <span className="voice-live" title="Você está neste canal">●</span>}
-            {isOwner && channels.length > 1 && (
-              <button
-                className="channel-delete"
-                title="Excluir canal de voz"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  if (window.confirm(`Excluir o canal de voz ${c.name}?`)) void handleDeleteChannel(c.id)
-                }}
-              >
-                ✕
-              </button>
+            {isOwner && (
+              <span className="channel-actions">
+                <button className="channel-edit" title="Renomear canal de voz" onClick={(e) => { e.stopPropagation(); openRenameChannel(c) }}>
+                  <PencilIcon size={12} />
+                </button>
+                {channels.length > 1 && (
+                  <button
+                    className="channel-delete"
+                    title="Excluir canal de voz"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      if (window.confirm(`Excluir o canal de voz ${c.name}?`)) void handleDeleteChannel(c.id)
+                    }}
+                  >
+                    ✕
+                  </button>
+                )}
+              </span>
             )}
           </div>
           {joined && voiceRoster.length > 0 && (

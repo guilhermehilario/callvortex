@@ -47,6 +47,9 @@ interface AppContextValue {
   selectDm: (threadId: string | null) => void
   openModal: (modal: Exclude<ModalType, null>) => void
   closeModal: () => void
+  renamingChannel: Channel | null
+  openRenameChannel: (channel: Channel) => void
+  handleRenameChannel: (channelId: string, name: string) => Promise<void>
   handleCreateServer: (name: string) => Promise<Server | null>
   handleJoinServer: (code: string) => Promise<Server | null>
   handleCreateChannel: (name: string, type: 'text' | 'voice') => Promise<void>
@@ -198,6 +201,7 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
   })
   const [screen, setScreen] = useState<Screen | null>(null)
   const [modal, setModal] = useState<ModalType>(null)
+  const [renamingChannel, setRenamingChannel] = useState<Channel | null>(null)
   const [notice, setNotice] = useState<Notice | null>(null)
   const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const voiceManagerRef = useRef<VoiceManager | null>(null)
@@ -534,7 +538,14 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
   }, [authState, dataReady, screen, servers, profile, micVolume, selectedOutputId, outputVolume, selectServer, notify])
 
   const openModal = useCallback((m: Exclude<ModalType, null>) => setModal(m), [])
-  const closeModal = useCallback(() => setModal(null), [])
+  const closeModal = useCallback(() => {
+    setModal(null)
+    setRenamingChannel(null)
+  }, [])
+  const openRenameChannel = useCallback((channel: Channel) => {
+    setRenamingChannel(channel)
+    setModal('rename-channel')
+  }, [])
 
   const handleCreateServer = useCallback(
     async (name: string): Promise<Server | null> => {
@@ -599,6 +610,21 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
         notify('success', 'Canal excluído.')
       } catch (e) {
         notify('error', e instanceof Error ? e.message : 'Erro ao excluir canal')
+      }
+    },
+    [screen, notify]
+  )
+
+  const handleRenameChannel = useCallback(
+    async (channelId: string, name: string) => {
+      if (screen?.type !== 'server') return
+      try {
+        await api.renameChannel(channelId, name)
+        const c = await api.fetchChannels(screen.serverId)
+        setChannels(c)
+        notify('success', 'Canal renomeado!')
+      } catch (e) {
+        notify('error', e instanceof Error ? e.message : 'Erro ao renomear canal')
       }
     },
     [screen, notify]
@@ -947,10 +973,13 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
       selectDm,
       openModal,
       closeModal,
+      renamingChannel,
+      openRenameChannel,
       handleCreateServer,
       handleJoinServer,
       handleCreateChannel,
       handleDeleteChannel,
+      handleRenameChannel,
       handleDeleteServer,
       sendChannelMessage,
       sendDmMessage,
@@ -1010,10 +1039,13 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
       selectDm,
       openModal,
       closeModal,
+      renamingChannel,
+      openRenameChannel,
       handleCreateServer,
       handleJoinServer,
       handleCreateChannel,
       handleDeleteChannel,
+      handleRenameChannel,
       handleDeleteServer,
       sendChannelMessage,
       sendDmMessage,
