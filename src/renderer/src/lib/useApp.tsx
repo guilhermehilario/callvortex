@@ -392,6 +392,10 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
     ch.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'channels', filter: `server_id=eq.${serverId}` }, () => {
       void refresh().catch(() => undefined)
     })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'channels', filter: `server_id=eq.${serverId}` }, () => {
+        // renomeação de canal propaga para todos os clientes ao vivo
+        void refresh().catch(() => undefined)
+      })
       .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'channels', filter: `server_id=eq.${serverId}` }, (payload) => {
         const deletedId = (payload.old as { id?: string } | undefined)?.id
         if (deletedId && deletedId === voiceManagerRef.current?.joinedChannelId) {
@@ -437,25 +441,34 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
   }, [authState, screen?.type, screen?.type === 'server' ? screen.serverId : null]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ------------------------------------------------------------
-  // Sincroniza meu próprio perfil (foto/username) entre janelas
+  // Realtime: perfis (nome/foto de usuário) ao vivo
+  // Qualquer alteração de username/avatar propaga para:
+  //   - meu próprio perfil (ex.: outra janela do app)
+  //   - conversas diretas (nome/foto do outro participante)
+  //   - minha presença no canal de voz (nome que os outros veem)
+  // (autores de mensagens e lista de membros têm assinaturas
+  //  próprias em ChatArea e MemberList)
   // ------------------------------------------------------------
   useEffect(() => {
-    if (authState !== 'signedIn' || !profile) return
+    if (authState !== 'signedIn') return
     const supabase = getSupabase()
-    const ch = supabase.channel('profile-live')
-    ch.on(
-      'postgres_changes',
-      { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${profile.id}` },
-      (payload) => {
-        const row = payload.new as Partial<Profile>
-        if (row.username) setProfile((prev) => (prev ? { ...prev, ...row } : prev))
+    const ch = supabase.channel('profiles-live')
+    ch.on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles' }, (payload) => {
+      const p = payload.new as Profile
+      // meu próprio perfil (ex.: troquei o nome/avatar em outra janela)
+      setProfile((prev) => (prev && prev.id === p.id ? { ...prev, ...p } : prev))
+      // conversas diretas: atualiza o perfil do outro participante
+      setDms((prev) => prev.map((t) => (t.other.id === p.id ? { ...t, other: { ...t.other, ...p } } : t)))
+      // minha presença no canal de voz: os outros veem o novo nome/foto
+      if (profileRef.current?.id === p.id) {
+        void voiceManagerRef.current?.updateProfile({ ...profileRef.current, ...p })
       }
-    )
+    })
     void ch.subscribe()
     return () => {
       void supabase.removeChannel(ch)
     }
-  }, [authState, profile?.id])
+  }, [authState])
 
   // ------------------------------------------------------------
   // Ações
@@ -474,9 +487,16 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
   }, [])
 
   const logout = useCallback(async () => {
+    // Sair explicitamente apaga as credenciais lembradas ("Lembrar de mim")
+    // para não voltar a entrar automaticamente na tela de login.
+    try {
+      await forgetCredentials()
+    } catch {
+      // falha ao apagar as credenciais salvas — encerra a sessão mesmo assim
+    }
     const supabase = getSupabase()
     await supabase.auth.signOut()
-  }, [])
+  }, [forgetCredentials])
 
   const selectServer = useCallback(async (serverId: string) => {
     const c = await api.fetchChannels(serverId)

@@ -352,6 +352,20 @@ export class VoiceManager {
   }
 
   // ------------------------------------------------------------
+  // Atualizar meu perfil ao vivo (nome/foto)
+  // Re-envia a presença para que os outros participantes vejam o
+  // novo username/avatar sem precisar sair e voltar ao canal.
+  // ------------------------------------------------------------
+  updateProfile(me: Profile): void {
+    this.me = me
+    if (this.channel && this.joinedChannelId) {
+      void this.channel.track({
+        info: { userId: me.id, username: me.username, avatar_color: me.avatar_color, avatar_url: me.avatar_url ?? null }
+      })
+    }
+  }
+
+  // ------------------------------------------------------------
   // Controles locais
   // ------------------------------------------------------------
   /**

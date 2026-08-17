@@ -140,7 +140,43 @@ nunca a secret/service_role.
 
 ---
 
-## 10. "email rate limit exceeded" ao criar conta
+## 10. Renomear canal não salva (ou mostra "Canal renomeado!" sem mudar)
+
+**Causa:** o banco não tem a política RLS `channels_update` (ou o usuário não
+é dono do servidor). Nesse caso o PostgREST atualiza **0 linhas sem retornar
+erro** — o app não sabe que falhou.
+
+**Resolver:**
+1. Verifique se você é o **dono** do servidor (o botão de renomear só aparece
+   para o dono).
+2. Rode `supabase/schema.sql` no SQL Editor (cria a política `channels_update`).
+3. Se o problema persistir, o app agora mostra um erro claro em vez de
+   confirmar sem salvar.
+
+---
+
+## 11. Nome/foto de usuário não atualiza ao vivo (mensagens, membros, DMs)
+
+**Causa:** a tabela `profiles` não estava habilitada no Realtime do Supabase
+(a publicação só tinha `messages`, `dm_messages` e `dm_threads`).
+
+**Resolver:** rode `supabase/migration-realtime-profiles.sql` no SQL Editor
+(habilita `profiles`, `channels` e `servers` na publicação — idempotente).
+
+---
+
+## 12. Sair do app e voltar a entrar automaticamente (não mostra o login)
+
+**Causa:** o "Lembrar de mim" guardava as credenciais e, ao clicar em **Sair**,
+ a tela de login entrava sozinha de novo com as credenciais salvas.
+
+**Resolver:** o logout agora **apaga as credenciais lembradas** — ao clicar em
+Sair você cai na tela de login normalmente. Se quiser entrar automaticamente
+na próxima abertura do app, marque "Lembrar de mim" de novo ao fazer login.
+
+---
+
+## 13. "email rate limit exceeded" ao criar conta
 
 **Causa:** o serviço de e-mail gratuito do Supabase permite só **~2 e-mails
 por hora** por projeto. Cada cadastro com "Confirm email" ligado envia um

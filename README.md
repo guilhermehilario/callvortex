@@ -18,7 +18,9 @@ Chat por texto e voz em tempo real com seus amigos. Desktop (Electron + React + 
 
 > **Atenção**: se você já rodou o `supabase/schema.sql` antes, rode também as
 > migrações no SQL Editor, nesta ordem: `migration-avatars-emojis.sql` (fotos +
-> emojis) e `migration-voice.sql` (canais de voz).
+> emojis), `migration-voice.sql` (canais de voz) e
+> `migration-realtime-profiles.sql` (nome/foto de usuário, renomear canal e
+> exclusão de servidor em tempo real).
 
 ### Sobre a voz (WebRTC)
 
@@ -39,7 +41,7 @@ VITE_SUPABASE_URL=sua-project-url
 VITE_SUPABASE_ANON_KEY=sua-anon-key
 ```
 
-4. No **SQL Editor** do painel, abra uma nova query, cole o conteúdo de `supabase/schema.sql` e rode. Esse script cria todas as tabelas, as regras de segurança (RLS) e habilita o Realtime.
+4. No **SQL Editor** do painel, abra uma nova query, cole o conteúdo de `supabase/schema.sql` e rode. Esse script cria todas as tabelas, as regras de segurança (RLS) e habilita o Realtime. Se você **já** rodou o schema antes, rode também `supabase/migration-realtime-profiles.sql` (habilita nome/foto de usuário, renomear canal e exclusão de servidor em tempo real — necessário para as atualizações ao vivo funcionarem).
 
 ### 2. Instalar e rodar
 

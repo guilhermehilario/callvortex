@@ -62,6 +62,9 @@ Com o `.env` preenchido, rode os SQLs no painel do Supabase:
    ordem:
    - `supabase/migration-avatars-emojis.sql` (foto de perfil + emojis)
    - `supabase/migration-voice.sql` (canais de voz)
+   - `supabase/migration-realtime-profiles.sql` (nome/foto de usuário,
+     renomear canal e exclusão de servidor **em tempo real**) — sem ele, as
+     atualizações ao vivo desses dados não funcionam
 
 ---
 

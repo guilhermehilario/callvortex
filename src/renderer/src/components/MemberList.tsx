@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { fetchMembers } from '../lib/api'
+import { getSupabase } from '../lib/supabase'
 import type { Profile } from '../lib/types'
 import { useApp } from '../lib/useApp'
 import Avatar from './Avatar'
@@ -22,6 +23,20 @@ export default function MemberList({ serverId }: { serverId: string }): React.JS
       })
     return () => {
       cancelled = true
+    }
+  }, [serverId])
+
+  // nome/foto de usuário mudou: atualiza a lista de membros ao vivo
+  useEffect(() => {
+    const supabase = getSupabase()
+    const ch = supabase.channel(`members-live-${serverId}`)
+    ch.on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles' }, (payload) => {
+      const p = payload.new as Profile
+      setMembers((prev) => prev.map((m) => (m.id === p.id ? { ...m, ...p } : m)))
+    })
+    void ch.subscribe()
+    return () => {
+      void supabase.removeChannel(ch)
     }
   }, [serverId])
 

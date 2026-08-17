@@ -344,11 +344,14 @@ create policy "dm_messages_delete" on public.dm_messages
   for delete to authenticated using (author_id = auth.uid());
 
 -- ------------------------------------------------------------
--- REALTIME (permite que o app receba mensagens ao vivo)
+-- REALTIME (permite que o app receba dados ao vivo)
 -- ------------------------------------------------------------
 alter publication supabase_realtime add table public.messages;
 alter publication supabase_realtime add table public.dm_messages;
 alter publication supabase_realtime add table public.dm_threads;
+alter publication supabase_realtime add table public.profiles;
+alter publication supabase_realtime add table public.channels;
+alter publication supabase_realtime add table public.servers;
 
 -- ============================================================
 -- FOTOS DE PERFIL + EMOJIS PERSONALIZADOS

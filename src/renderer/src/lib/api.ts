@@ -164,11 +164,20 @@ export async function deleteChannel(channelId: string): Promise<void> {
 
 export async function renameChannel(channelId: string, name: string): Promise<void> {
   const supabase = getSupabase()
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('channels')
     .update({ name: name.trim().replace(/\s+/g, '-').toLowerCase() })
     .eq('id', channelId)
+    .select('id')
+    .maybeSingle()
   if (error) throw err('Erro ao renomear canal', error)
+  if (!data) {
+    // PostgREST retorna 0 linhas SEM erro quando o RLS bloqueia o update.
+    // Se isso acontecer, a política "channels_update" não existe no banco.
+    throw new Error(
+      'Não foi possível renomear o canal (nenhuma linha alterada). Verifique se você é o dono do servidor e rode o supabase/schema.sql (ou supabase/migration-realtime-profiles.sql) no SQL Editor do Supabase para garantir as políticas de canal.'
+    )
+  }
 }
 
 // ------------------------------------------------------------

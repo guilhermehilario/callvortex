@@ -94,6 +94,13 @@ export default function ChatArea(): React.JSX.Element {
       })
     }
 
+    // alguém trocou o nome/foto: atualiza o cache e as mensagens já na tela
+    const applyProfileUpdate = (p: Profile): void => {
+      const cached = profileCache.current.get(p.id)
+      profileCache.current.set(p.id, { ...(cached ?? { id: p.id, username: 'desconhecido', avatar_color: '#5865f2' }), ...p })
+      setMessages((prev) => prev.map((m) => (m.author_id === p.id ? { ...m, author: { ...m.author, ...p } } : m)))
+    }
+
     if (screen?.type === 'server' && screen.channelId) {
       const channelId = screen.channelId
       void fetchMessages(channelId)
@@ -116,6 +123,9 @@ export default function ChatArea(): React.JSX.Element {
         .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'messages', filter: `channel_id=eq.${channelId}` }, (payload) => {
           const id = (payload.old as { id?: number })?.id
           if (id) setMessages((prev) => prev.filter((m) => m.id !== id))
+        })
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles' }, (payload) => {
+          applyProfileUpdate(payload.new as Profile)
         })
       void ch.subscribe()
     } else if (screen?.type === 'dm' && screen.threadId) {
@@ -140,6 +150,9 @@ export default function ChatArea(): React.JSX.Element {
         .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'dm_messages', filter: `thread_id=eq.${threadId}` }, (payload) => {
           const id = (payload.old as { id?: number })?.id
           if (id) setMessages((prev) => prev.filter((m) => m.id !== id))
+        })
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles' }, (payload) => {
+          applyProfileUpdate(payload.new as Profile)
         })
       void ch.subscribe()
     } else {
