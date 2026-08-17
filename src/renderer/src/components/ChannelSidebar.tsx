@@ -296,7 +296,7 @@ function VoiceConnectedPanel(): React.JSX.Element | null {
         </button>
       </div>
 
-      <MicPicker collapsed={!micSettingsOpen} onToggleCollapsed={() => setMicSettingsOpen((v) => !v)} />
+      {micSettingsOpen && <MicPicker onToggleCollapsed={() => setMicSettingsOpen(false)} />}
 
       <div className="voice-connected-controls">
         <div className="voice-control-group">

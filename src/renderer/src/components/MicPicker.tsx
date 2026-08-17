@@ -13,12 +13,11 @@ const LEVEL_HEIGHTS = [25, 35, 45, 55, 65, 75, 85, 95, 95, 85, 75, 65, 55, 45, 3
  * confirmar que o mic capta som antes de entrar no canal de voz.
  */
 interface MicPickerProps {
-  /** estado controlado de fora (ex.: seta ao lado do microfone no painel de voz) */
-  collapsed?: boolean
+  /** chamado quando o usuário recolhe pelo cabeçalho (ex.: esconder o card no painel de voz) */
   onToggleCollapsed?: () => void
 }
 
-export default function MicPicker({ collapsed: collapsedProp, onToggleCollapsed }: MicPickerProps = {}): React.JSX.Element {
+export default function MicPicker({ onToggleCollapsed }: MicPickerProps = {}): React.JSX.Element {
   const {
     microphones,
     selectedMicId,
@@ -35,10 +34,8 @@ export default function MicPicker({ collapsed: collapsedProp, onToggleCollapsed 
   const [testing, setTesting] = useState(false)
   const [testLevel, setTestLevel] = useState(0)
   const [testError, setTestError] = useState<string | null>(null)
-  // recolher as configurações quando não precisar mais usar (estado interno
-  // usado quando o componente não é controlado de fora)
-  const [internalCollapsed, setInternalCollapsed] = useState(false)
-  const collapsed = collapsedProp ?? internalCollapsed
+  // recolher as configurações quando não precisar mais usar
+  const [collapsed, setCollapsed] = useState(false)
   const streamRef = useRef<MediaStream | null>(null)
   const rafRef = useRef<number | null>(null)
   const ctxRef = useRef<AudioContext | null>(null)
@@ -59,7 +56,7 @@ export default function MicPicker({ collapsed: collapsedProp, onToggleCollapsed 
     // ao ocultar, encerra o teste para o retorno de áudio não ficar tocando
     if (!collapsed) stopTest()
     if (onToggleCollapsed) onToggleCollapsed()
-    else setInternalCollapsed((v) => !v)
+    else setCollapsed((v) => !v)
   }
 
   useEffect(() => {
@@ -85,7 +82,7 @@ export default function MicPicker({ collapsed: collapsedProp, onToggleCollapsed 
       setTesting(true)
       const ctx = new AudioContext()
       ctxRef.current = ctx
-      if (ctx.state === 'suspended') void ctx.resume()
+      if (ctx.state === 'suspended') await ctx.resume()
       const source = ctx.createMediaStreamSource(stream)
 
       // medidor de nível (do áudio cru, como na chamada)
@@ -215,7 +212,7 @@ export default function MicPicker({ collapsed: collapsedProp, onToggleCollapsed 
         </label>
       </div>
 
-          {testing && <div className="mic-test-hint">Ouvindo o retorno do microfone (atraso de 0,5 s)…</div>}
+          {testing && <div className="mic-test-hint">Você está ouvindo seu microfone (retorno com 0,5 s de atraso para evitar microfonia) — fale para conferir.</div>}
           {testError && <div className="mic-test-error">{testError}</div>}
         </>
       )}
