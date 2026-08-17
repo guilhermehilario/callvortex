@@ -9,7 +9,7 @@ import React, {
 } from 'react'
 import { getSupabase } from './supabase'
 import * as api from './api'
-import { VoiceManager, getMicrophones } from './voice'
+import { VoiceManager, getMicrophones, getOutputDevices } from './voice'
 import { playDeafenSound, playJoinSound, playLeaveSound, playMuteSound } from './sounds'
 import type { Channel, DmThreadWithOther, ModalType, Profile, Screen, Server, ServerEmoji, VoicePeerInfo } from './types'
 
@@ -71,6 +71,12 @@ interface AppContextValue {
   peerSignals: Record<string, number>
   micVolume: number
   setMicVolume: (volume: number) => void
+  outputDevices: MediaDeviceInfo[]
+  selectedOutputId: string | null
+  outputVolume: number
+  loadOutputDevices: () => Promise<void>
+  selectOutputDevice: (deviceId: string) => Promise<void>
+  setOutputVolume: (volume: number) => void
   noiseSuppression: boolean
   setNoiseSuppression: (enabled: boolean) => Promise<void>
   joinVoice: (channelId: string) => Promise<void>
@@ -153,6 +159,22 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
   const [micVolume, setMicVolumeState] = useState<number>(() => {
     try {
       const v = Number(localStorage.getItem('mic-volume'))
+      return Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 1
+    } catch {
+      return 1
+    }
+  })
+  const [outputDevices, setOutputDevices] = useState<MediaDeviceInfo[]>([])
+  const [selectedOutputId, setSelectedOutputId] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem('output-device-id')
+    } catch {
+      return null
+    }
+  })
+  const [outputVolume, setOutputVolumeState] = useState<number>(() => {
+    try {
+      const v = Number(localStorage.getItem('output-volume'))
       return Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 1
     } catch {
       return 1
@@ -488,6 +510,8 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
           setScreen({ type: 'server', serverId: server.id, channelId: ch.id })
           await voiceManagerRef.current!.join(ch.id, profile, selectedMicId)
           voiceManagerRef.current!.setMicVolume(micVolume)
+          if (selectedOutputId) void voiceManagerRef.current!.setOutputDevice(selectedOutputId)
+          voiceManagerRef.current!.setOutputVolume(outputVolume)
           setVoiceChannelId(ch.id)
           setVoiceMuted(false)
           setVoiceDeafened(false)
@@ -502,7 +526,7 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
     } else {
       void selectServer(servers[0].id)
     }
-  }, [authState, dataReady, screen, servers, profile, micVolume, selectServer, notify])
+  }, [authState, dataReady, screen, servers, profile, micVolume, selectedOutputId, outputVolume, selectServer, notify])
 
   const openModal = useCallback((m: Exclude<ModalType, null>) => setModal(m), [])
   const closeModal = useCallback(() => setModal(null), [])
@@ -734,6 +758,8 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
       try {
         await voiceManagerRef.current!.join(channelId, profile, selectedMicId)
         voiceManagerRef.current!.setMicVolume(micVolume)
+        if (selectedOutputId) void voiceManagerRef.current!.setOutputDevice(selectedOutputId)
+        voiceManagerRef.current!.setOutputVolume(outputVolume)
         setVoiceChannelId(channelId)
         setVoiceMuted(false)
         setVoiceDeafened(false)
@@ -745,7 +771,7 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
         notify('error', e instanceof Error ? e.message : 'Erro ao entrar no canal de voz')
       }
     },
-    [profile, selectedMicId, micVolume, screen, notify]
+    [profile, selectedMicId, micVolume, selectedOutputId, outputVolume, screen, notify]
   )
 
   const leaveVoice = useCallback(async () => {
@@ -810,6 +836,40 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
     voiceManagerRef.current?.setMicVolume(v)
   }, [])
 
+  const loadOutputDevices = useCallback(async () => {
+    const devices = await getOutputDevices()
+    setOutputDevices(devices)
+  }, [])
+
+  useEffect(() => {
+    void loadOutputDevices()
+    if (!navigator.mediaDevices?.addEventListener) return
+    const onChange = (): void => void loadOutputDevices()
+    navigator.mediaDevices.addEventListener('devicechange', onChange)
+    return () => navigator.mediaDevices.removeEventListener('devicechange', onChange)
+  }, [loadOutputDevices])
+
+  const selectOutputDevice = useCallback(async (deviceId: string) => {
+    setSelectedOutputId(deviceId)
+    try {
+      localStorage.setItem('output-device-id', deviceId)
+    } catch {
+      // armazenamento indisponível — segue só em memória
+    }
+    await voiceManagerRef.current?.setOutputDevice(deviceId)
+  }, [])
+
+  const setOutputVolume = useCallback((volume: number) => {
+    const v = Math.min(1, Math.max(0, volume))
+    setOutputVolumeState(v)
+    try {
+      localStorage.setItem('output-volume', String(v))
+    } catch {
+      // armazenamento indisponível — segue só em memória
+    }
+    voiceManagerRef.current?.setOutputVolume(v)
+  }, [])
+
   const setPeerVolume = useCallback((userId: string, volume: number) => {
     setPeerVolumes((prev) => {
       const next = { ...prev, [userId]: volume }
@@ -869,6 +929,12 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
       peerSignals,
       micVolume,
       setMicVolume,
+      outputDevices,
+      selectedOutputId,
+      outputVolume,
+      loadOutputDevices,
+      selectOutputDevice,
+      setOutputVolume,
       noiseSuppression,
       setNoiseSuppression,
       joinVoice,
@@ -924,6 +990,12 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
       peerSignals,
       micVolume,
       setMicVolume,
+      outputDevices,
+      selectedOutputId,
+      outputVolume,
+      loadOutputDevices,
+      selectOutputDevice,
+      setOutputVolume,
       noiseSuppression,
       setNoiseSuppression,
       joinVoice,

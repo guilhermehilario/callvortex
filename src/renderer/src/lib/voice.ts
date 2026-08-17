@@ -48,6 +48,20 @@ export async function getMicrophones(): Promise<MediaDeviceInfo[]> {
   }
 }
 
+/**
+ * Lista os dispositivos de saída de áudio disponíveis (fones, caixas…).
+ * Os nomes podem vir vazios até o usuário conceder permissão de microfone.
+ */
+export async function getOutputDevices(): Promise<MediaDeviceInfo[]> {
+  if (!navigator.mediaDevices?.enumerateDevices) return []
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices()
+    return devices.filter((d) => d.kind === 'audiooutput')
+  } catch {
+    return []
+  }
+}
+
 function audioConstraints(deviceId?: string | null): MediaTrackConstraints {
   return {
     echoCancellation: true,
@@ -209,6 +223,9 @@ export class VoiceManager {
   // volume do próprio microfone (0-1) aplicado ao áudio enviado
   private micVolume = 1
   private sendGain: GainNode | null = null
+  // saída: dispositivo (setSinkId) e volume geral aplicado ao áudio recebido
+  private outputDeviceId: string | null = null
+  private outputVolume = 1
 
   onRoster: ((users: VoicePeerInfo[]) => void) | null = null
   onSpeaking: ((userId: string, speaking: boolean) => void) | null = null
@@ -379,7 +396,7 @@ export class VoiceManager {
     const v = Math.min(1, Math.max(0, volume))
     this.peerVolumes.set(peerId, v)
     const el = this.audioEls.get(peerId)
-    if (el) el.volume = v
+    if (el) this.applyVolume(el, peerId)
   }
 
   /**
@@ -389,6 +406,36 @@ export class VoiceManager {
   setMicVolume(volume: number): void {
     this.micVolume = Math.min(1, Math.max(0, volume))
     if (this.sendGain) this.sendGain.gain.value = this.micVolume
+  }
+
+  /** Aplica o volume efetivo (individual × volume geral) num elemento. */
+  private applyVolume(el: HTMLAudioElement, peerId: string): void {
+    const v = (this.peerVolumes.get(peerId) ?? 1) * this.outputVolume
+    el.volume = Math.min(1, Math.max(0, v))
+  }
+
+  /**
+   * Define o dispositivo de saída ('' = padrão do sistema) usado para tocar
+   * o áudio dos participantes, ao vivo e nas próximas conexões.
+   */
+  async setOutputDevice(deviceId: string): Promise<void> {
+    this.outputDeviceId = deviceId || null
+    for (const el of this.audioEls.values()) {
+      try {
+        await el.setSinkId(deviceId)
+      } catch {
+        // dispositivo indisponível — mantém o atual
+      }
+    }
+  }
+
+  /**
+   * Define o volume geral (0 a 1) do fone, aplicado em tempo real sobre o
+   * volume individual de cada participante.
+   */
+  setOutputVolume(volume: number): void {
+    this.outputVolume = Math.min(1, Math.max(0, volume))
+    this.audioEls.forEach((el, peerId) => this.applyVolume(el, peerId))
   }
 
   setLocalMuted(muted: boolean): void {
@@ -599,7 +646,10 @@ export class VoiceManager {
     }
     el.srcObject = stream
     // aplica o volume individual salvo para este participante
-    el.volume = this.peerVolumes.get(peerId) ?? 1
+    this.applyVolume(el, peerId)
+    if (this.outputDeviceId) {
+      void el.setSinkId(this.outputDeviceId).catch(() => undefined)
+    }
     void el.play().catch(() => undefined)
     this.attachSpeakingDetector(peerId, stream, (s) => this.setSpeaking(peerId, s))
   }

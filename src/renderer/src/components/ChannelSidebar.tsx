@@ -5,6 +5,7 @@ import { useApp } from '../lib/useApp'
 import Avatar from './Avatar'
 import { ActivitiesIcon, BroadcastIcon, ChevronDownIcon, GearIcon, HeadphonesIcon, HeadphonesOffIcon, MicIcon, MicOffIcon, PhoneOffIcon, PowerIcon, RouterIcon, ScreenShareIcon, VideoIcon } from './Icons'
 import MicPicker from './MicPicker'
+import OutputPicker from './OutputPicker'
 import SignalBars from './SignalBars'
 
 export default function ChannelSidebar(): React.JSX.Element {
@@ -264,6 +265,7 @@ function VoiceConnectedPanel(): React.JSX.Element | null {
     return Math.round(values.reduce((a, b) => a + b, 0) / values.length)
   }, [peerSignals])
   const [micSettingsOpen, setMicSettingsOpen] = useState(false)
+  const [headphoneSettingsOpen, setHeadphoneSettingsOpen] = useState(false)
 
   if (!voiceChannelId || !profile) return null
   const channel = channels.find((c) => c.id === voiceChannelId)
@@ -297,6 +299,7 @@ function VoiceConnectedPanel(): React.JSX.Element | null {
       </div>
 
       {micSettingsOpen && <MicPicker onToggleCollapsed={() => setMicSettingsOpen(false)} />}
+      {headphoneSettingsOpen && <OutputPicker onToggleCollapsed={() => setHeadphoneSettingsOpen(false)} />}
 
       <div className="voice-connected-controls">
         <div className="voice-control-group">
@@ -308,20 +311,29 @@ function VoiceConnectedPanel(): React.JSX.Element | null {
             {voiceMuted ? <MicOffIcon size={18} /> : <MicIcon size={18} />}
           </button>
           <button
-            className={`mic-settings-toggle ${micSettingsOpen ? 'open' : ''}`}
+            className={`control-settings-toggle ${micSettingsOpen ? 'open' : ''}`}
             title={micSettingsOpen ? 'Ocultar configurações do microfone' : 'Abrir configurações do microfone'}
             onClick={() => setMicSettingsOpen((v) => !v)}
           >
             <ChevronDownIcon size={12} />
           </button>
         </div>
-        <button
-          className={`voice-control ${voiceDeafened ? 'active' : ''}`}
-          title={voiceDeafened ? 'Ouvir de novo' : 'Ficar surdo'}
-          onClick={toggleVoiceDeafen}
-        >
-          {voiceDeafened ? <HeadphonesOffIcon size={18} /> : <HeadphonesIcon size={18} />}
-        </button>
+        <div className="voice-control-group">
+          <button
+            className={`voice-control ${voiceDeafened ? 'active' : ''}`}
+            title={voiceDeafened ? 'Ouvir de novo' : 'Ficar surdo'}
+            onClick={toggleVoiceDeafen}
+          >
+            {voiceDeafened ? <HeadphonesOffIcon size={18} /> : <HeadphonesIcon size={18} />}
+          </button>
+          <button
+            className={`control-settings-toggle ${headphoneSettingsOpen ? 'open' : ''}`}
+            title={headphoneSettingsOpen ? 'Ocultar configurações do fone de ouvido' : 'Abrir configurações do fone de ouvido'}
+            onClick={() => setHeadphoneSettingsOpen((v) => !v)}
+          >
+            <ChevronDownIcon size={12} />
+          </button>
+        </div>
         <button className="voice-control leave" title="Sair do canal de voz" onClick={() => void leaveVoice()}>
           <PhoneOffIcon size={18} />
         </button>
