@@ -12,6 +12,7 @@
   --blurple-hover: #4752c4;
   --green: #23a55a;
   --red: #f23f43;
+  --wine: #b03a3e;
   --border: rgba(0, 0, 0, 0.2);
   --font: 'Segoe UI', 'Helvetica Neue', system-ui, -apple-system, sans-serif;
 }
@@ -642,15 +643,33 @@ button {
   font-size: 11px;
   color: var(--text-muted);
 }
-.user-logout {
-  color: var(--text-muted);
-  font-size: 16px;
-  padding: 6px 8px;
-  border-radius: 4px;
+.user-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 4px;
+  flex-shrink: 0;
 }
-.user-logout:hover {
-  color: var(--red);
+.user-action {
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+.user-action:hover {
   background: var(--bg-modifier-hover);
+  color: var(--text-normal);
+}
+.user-action.active {
+  background: var(--wine);
+  color: #fff;
+}
+.user-action.logout:hover {
+  color: var(--red);
 }
 .user-avatar-btn {
   border-radius: 50%;
@@ -711,52 +730,100 @@ button {
   gap: 8px;
   flex-shrink: 0;
 }
-.voice-connected-main {
+/* indicador de conexão de voz (ícone de transmissão em verde) */
+.voice-connection-status {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
   min-width: 0;
 }
-.voice-connected-title {
-  flex: 1;
+.voice-connection-icon {
+  color: var(--green);
+  display: inline-flex;
+  flex-shrink: 0;
+}
+.voice-connection-text {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
+}
+.voice-connection-title {
   font-size: 13px;
   font-weight: 700;
-  color: var(--green);
+  color: var(--text-normal);
+}
+.voice-connection-sub {
+  font-size: 11px;
+  color: var(--text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.voice-connected-controls {
+/* barra de ações rápidas (câmera, tela, atividades, sinal) */
+.voice-quick-actions {
   display: flex;
-  align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
+  gap: 6px;
 }
-.voice-control {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
+.voice-quick-action {
+  flex: 1;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--bg-primary);
+  color: var(--text-muted);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 15px;
+  transition: background 0.15s, color 0.15s;
+}
+.voice-quick-action:hover {
+  background: var(--bg-modifier-active);
+  color: var(--text-normal);
+}
+/* controles de voz (mudo, surdo, sair) */
+.voice-connected-controls {
+  display: flex;
+  gap: 6px;
+}
+.voice-connected-controls .voice-control {
+  flex: 1;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--bg-primary);
+  color: var(--text-normal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+.voice-connected-controls .voice-control:hover {
+  background: var(--bg-modifier-active);
+}
+.voice-connected-controls .voice-control.active {
+  background: var(--wine);
+  color: #fff;
+}
+.voice-connected-controls .voice-control.leave {
+  background: var(--red);
+  color: #fff;
+}
+.voice-connected-controls .voice-control.leave:hover {
+  filter: brightness(0.9);
+}
+/* botão de voz base (usado na tela do canal de voz) */
+.voice-control {
+  border-radius: 50%;
   background: var(--bg-modifier-hover);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
 }
 .voice-control:hover {
   background: var(--bg-modifier-active);
 }
 .voice-control.active {
-  background: var(--red);
-}
-.voice-control.leave {
-  background: var(--red);
+  background: var(--wine);
   color: #fff;
-  transform: rotate(135deg);
-}
-.voice-control.leave:hover {
-  filter: brightness(0.85);
 }
 
 /* tela do canal de voz */
@@ -850,9 +917,6 @@ button {
 .voice-member-volume input[type='range'] {
   flex: 1;
   min-width: 0;
-  height: 4px;
-  accent-color: var(--green);
-  cursor: pointer;
 }
 .voice-member-vol-value {
   font-size: 11px;
@@ -898,7 +962,6 @@ button {
 .voice-screen-controls .voice-control {
   width: 48px;
   height: 48px;
-  font-size: 20px;
   border-radius: 50%;
 }
 .voice-join-btn {
@@ -907,7 +970,7 @@ button {
   font-size: 15px;
 }
 
-/* seletor de microfone */
+/* seletor de microfone (card de configurações) */
 .voice-connected-panel .mic-picker {
   width: 100%;
 }
@@ -917,9 +980,15 @@ button {
   margin-top: 16px;
 }
 .mic-picker {
-  background: var(--bg-modifier-hover);
-  border-radius: 6px;
-  padding: 8px 10px;
+  background: var(--bg-primary);
+  border-radius: 10px;
+  padding: 10px 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+.mic-picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 .mic-picker-row {
   display: flex;
@@ -928,25 +997,141 @@ button {
 }
 .mic-picker-label {
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.4px;
 }
 .mic-picker-refresh {
-  background: none;
-  border: none;
   color: var(--text-muted);
-  font-size: 14px;
-  cursor: pointer;
-  padding: 0 2px;
-  line-height: 1;
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 4px;
+  line-height: 0;
 }
 .mic-picker-refresh:hover {
   color: var(--text-normal);
+  background: var(--bg-modifier-hover);
+}
+.mic-picker-select-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+.mic-select-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+.mic-picker-select {
+  width: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  background: var(--bg-floating);
+  border: 1px solid var(--bg-modifier-active);
+  border-radius: 8px;
+  color: var(--text-normal);
+  padding: 7px 28px 7px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  cursor: pointer;
+}
+.mic-picker-select:focus {
+  border-color: var(--blurple);
+}
+.mic-picker-select option {
+  background: var(--bg-primary);
+  color: var(--text-normal);
+}
+.mic-select-chevron {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+.mic-test-btn {
+  background: var(--bg-modifier-active);
+  border-radius: 8px;
+  color: var(--text-normal);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 0 14px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+.mic-test-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+.mic-test-btn.testing {
+  color: var(--green);
+}
+/* slider de volume do microfone (trilha fina + thumb branco) */
+.mic-volume-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+.mic-volume-slider,
+.voice-member-volume input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(to right, var(--blurple) var(--fill, 0%), rgba(255, 255, 255, 0.12) var(--fill, 0%));
+  outline: none;
+  cursor: pointer;
+}
+.mic-volume-slider::-webkit-slider-thumb,
+.voice-member-volume input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  cursor: grab;
+}
+.mic-volume-slider::-moz-range-thumb,
+.voice-member-volume input[type='range']::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #fff;
+  border: none;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+.mic-volume-slider::-moz-range-track,
+.voice-member-volume input[type='range']::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.12);
+}
+/* medidor de nível em tempo real (barras verticais) */
+.mic-level-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 30px;
+  margin-top: 10px;
+}
+.mic-level-bar {
+  flex: 1;
+  min-width: 0;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.14);
+  transition: background 90ms linear;
+}
+.mic-level-bar.on {
+  background: var(--green);
 }
 .noise-row {
-  margin-top: 8px;
+  margin-top: 10px;
 }
 .noise-switch {
   display: inline-flex;
@@ -957,20 +1142,20 @@ button {
   display: none;
 }
 .noise-switch-track {
-  width: 34px;
+  width: 36px;
   height: 20px;
-  background: var(--bg-modifier-active);
+  background: var(--bg-floating);
   border-radius: 10px;
   position: relative;
   transition: background 0.15s;
 }
 .noise-switch-thumb {
   position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 16px;
-  height: 16px;
-  background: var(--text-normal);
+  top: 3px;
+  left: 3px;
+  width: 14px;
+  height: 14px;
+  background: #b5bac1;
   border-radius: 50%;
   transition: left 0.15s, background 0.15s;
 }
@@ -978,58 +1163,14 @@ button {
   background: var(--green);
 }
 .noise-switch input:checked + .noise-switch-track .noise-switch-thumb {
-  left: 16px;
+  left: 19px;
+  background: #fff;
 }
-.mic-picker-select-row {
-  display: flex;
-  gap: 6px;
-  margin-top: 6px;
-}
-.mic-picker-select {
-  flex: 1;
-  min-width: 0;
-  background: var(--bg-floating);
-  border: 1px solid var(--bg-modifier-active);
-  border-radius: 4px;
-  color: var(--text-normal);
-  padding: 6px 8px;
-  font-size: 13px;
-  font-family: inherit;
-  outline: none;
-  cursor: pointer;
-}
-.mic-picker-select:focus {
-  border-color: var(--green);
-}
-.mic-test-btn {
-  background: var(--bg-modifier-active);
-  border: none;
-  border-radius: 4px;
-  color: var(--text-normal);
-  font-size: 12px;
-  font-weight: 600;
-  padding: 0 12px;
-  cursor: pointer;
-  white-space: nowrap;
-}
-.mic-test-btn:hover {
-  background: rgba(255, 255, 255, 0.12);
-}
-.mic-test-btn.testing {
-  color: var(--green);
-}
-.mic-level {
-  height: 6px;
-  background: var(--bg-modifier-active);
-  border-radius: 3px;
-  overflow: hidden;
+.mic-test-hint {
+  color: var(--text-muted);
+  font-size: 11px;
   margin-top: 8px;
-}
-.mic-level-fill {
-  height: 100%;
-  background: var(--green);
-  border-radius: 3px;
-  transition: width 100ms linear;
+  line-height: 1.4;
 }
 .mic-test-error {
   color: var(--red);

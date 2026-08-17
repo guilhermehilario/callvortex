@@ -3,6 +3,7 @@ import { uploadAvatar } from '../lib/api'
 import type { Channel } from '../lib/types'
 import { useApp } from '../lib/useApp'
 import Avatar from './Avatar'
+import { ActivitiesIcon, BroadcastIcon, GearIcon, HeadphonesIcon, HeadphonesOffIcon, MicIcon, MicOffIcon, PhoneOffIcon, PowerIcon, RouterIcon, ScreenShareIcon, VideoIcon } from './Icons'
 import MicPicker from './MicPicker'
 import SignalBars from './SignalBars'
 
@@ -237,13 +238,15 @@ export default function ChannelSidebar(): React.JSX.Element {
 }
 
 /**
- * Painel "em chamada" na base da sidebar (estilo Discord): mostra o sinal da
- * sua conexão, o seletor de microfone e, na parte de baixo, os botões de voz
- * (mudo, surdo e sair). Só aparece enquanto você estiver conectado a um canal de voz.
+ * Painel "em chamada" na base da sidebar (estilo Discord): mostra o indicador
+ * de conexão de voz, a barra de ações rápidas, as configurações de microfone
+ * e, na parte de baixo, os botões de voz (mudo, surdo e sair). Só aparece
+ * enquanto você estiver conectado a um canal de voz.
  */
 function VoiceConnectedPanel(): React.JSX.Element | null {
   const {
     profile,
+    channels,
     voiceChannelId,
     voiceMuted,
     voiceDeafened,
@@ -253,6 +256,7 @@ function VoiceConnectedPanel(): React.JSX.Element | null {
     toggleVoiceDeafen
   } = useApp()
   if (!voiceChannelId || !profile) return null
+  const channel = channels.find((c) => c.id === voiceChannelId)
 
   // Sinal da minha conexão: média dos sinais medidos nas conexões WebRTC com
   // os outros participantes (RTT/perda de pacotes vistos do meu lado).
@@ -261,38 +265,62 @@ function VoiceConnectedPanel(): React.JSX.Element | null {
     if (values.length === 0) return 0
     return Math.round(values.reduce((a, b) => a + b, 0) / values.length)
   }, [peerSignals])
+  const signalWord = mySignal === 0 ? 'conectando' : mySignal <= 1 ? 'ruim' : mySignal === 2 ? 'regular' : mySignal === 3 ? 'bom' : 'excelente'
 
   return (
     <div className="voice-connected-panel">
-      <div className="voice-connected-main">
-        <SignalBars quality={mySignal} />
-        <div className="voice-connected-controls">
-          <button
-            className={`voice-control ${voiceMuted ? 'active' : ''}`}
-            title={voiceMuted ? 'Ativar microfone' : 'Silenciar microfone'}
-            onClick={toggleVoiceMute}
-          >
-            {voiceMuted ? '🔇' : '🎤'}
-          </button>
-          <button
-            className={`voice-control ${voiceDeafened ? 'active' : ''}`}
-            title={voiceDeafened ? 'Ouvir de novo' : 'Ficar surdo'}
-            onClick={toggleVoiceDeafen}
-          >
-            🎧
-          </button>
-          <button className="voice-control leave" title="Sair do canal de voz" onClick={() => void leaveVoice()}>
-            📞
-          </button>
+      <div className="voice-connection-status">
+        <BroadcastIcon size={16} className="voice-connection-icon" />
+        <div className="voice-connection-text">
+          <span className="voice-connection-title">Voz conectada</span>
+          <span className="voice-connection-sub">
+            {channel?.name ?? 'Canal de voz'} · sinal {signalWord}
+          </span>
         </div>
       </div>
+
+      <div className="voice-quick-actions">
+        <button className="voice-quick-action" title="Câmera / vídeo">
+          <VideoIcon size={18} />
+        </button>
+        <button className="voice-quick-action" title="Compartilhar tela">
+          <ScreenShareIcon size={18} />
+        </button>
+        <button className="voice-quick-action" title="Atividades">
+          <ActivitiesIcon size={18} />
+        </button>
+        <button className="voice-quick-action" title="Sinal / roteador">
+          <RouterIcon size={18} />
+        </button>
+      </div>
+
       <MicPicker />
+
+      <div className="voice-connected-controls">
+        <button
+          className={`voice-control ${voiceMuted ? 'active' : ''}`}
+          title={voiceMuted ? 'Ativar microfone' : 'Silenciar microfone'}
+          onClick={toggleVoiceMute}
+        >
+          {voiceMuted ? <MicOffIcon size={18} /> : <MicIcon size={18} />}
+        </button>
+        <button
+          className={`voice-control ${voiceDeafened ? 'active' : ''}`}
+          title={voiceDeafened ? 'Ouvir de novo' : 'Ficar surdo'}
+          onClick={toggleVoiceDeafen}
+        >
+          {voiceDeafened ? <HeadphonesOffIcon size={18} /> : <HeadphonesIcon size={18} />}
+        </button>
+        <button className="voice-control leave" title="Sair do canal de voz" onClick={() => void leaveVoice()}>
+          <PhoneOffIcon size={18} />
+        </button>
+      </div>
     </div>
   )
 }
 
 function UserPanel(): React.JSX.Element {
-  const { profile, onlineUsers, logout, updateAvatarUrl, notify } = useApp()
+  const { profile, onlineUsers, voiceMuted, voiceDeafened, toggleVoiceMute, toggleVoiceDeafen, logout, updateAvatarUrl, notify } = useApp()
   const fileRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
   if (!profile) return <div className="user-panel" />
@@ -337,9 +365,28 @@ function UserPanel(): React.JSX.Element {
         <span className="user-name">{profile.username}</span>
         <span className="user-status">{uploading ? 'Enviando foto…' : online ? 'Online' : 'Offline'}</span>
       </div>
-      <button className="user-logout" title="Sair" onClick={() => void logout()}>
-        ⏻
-      </button>
+      <div className="user-actions">
+        <button
+          className={`user-action ${voiceMuted ? 'active' : ''}`}
+          title={voiceMuted ? 'Ativar microfone' : 'Silenciar microfone'}
+          onClick={toggleVoiceMute}
+        >
+          {voiceMuted ? <MicOffIcon size={18} /> : <MicIcon size={18} />}
+        </button>
+        <button
+          className={`user-action ${voiceDeafened ? 'active' : ''}`}
+          title={voiceDeafened ? 'Ouvir de novo' : 'Ficar surdo'}
+          onClick={toggleVoiceDeafen}
+        >
+          {voiceDeafened ? <HeadphonesOffIcon size={18} /> : <HeadphonesIcon size={18} />}
+        </button>
+        <button className="user-action" title="Configurações">
+          <GearIcon size={18} />
+        </button>
+        <button className="user-action logout" title="Sair" onClick={() => void logout()}>
+          <PowerIcon size={18} />
+        </button>
+      </div>
     </div>
   )
 }

@@ -11,6 +11,16 @@ interface SignalMsg {
   candidate?: RTCIceCandidateInit
 }
 
+// URL do módulo do supressor de ruído (AudioWorklet) — cache compartilhado
+// entre o VoiceManager e o teste de microfone, para carregar o blob só uma vez.
+let noiseModuleUrlCache: string | null = null
+export function getNoiseSuppressorModuleUrl(): string {
+  if (noiseModuleUrlCache) return noiseModuleUrlCache
+  const blob = new Blob([NOISE_WORKLET_SOURCE], { type: 'application/javascript' })
+  noiseModuleUrlCache = URL.createObjectURL(blob)
+  return noiseModuleUrlCache
+}
+
 const ICE_SERVERS: RTCIceServer[] = [
   { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
   { urls: 'stun:stun.services.mozilla.com' },
@@ -196,7 +206,9 @@ export class VoiceManager {
   private audioCtx: AudioContext | null = null
   private workletNode: AudioWorkletNode | null = null
   private processedStream: MediaStream | null = null
-  private noiseModuleUrl: string | null = null
+  // volume do próprio microfone (0-1) aplicado ao áudio enviado
+  private micVolume = 1
+  private sendGain: GainNode | null = null
 
   onRoster: ((users: VoicePeerInfo[]) => void) | null = null
   onSpeaking: ((userId: string, speaking: boolean) => void) | null = null
@@ -241,10 +253,9 @@ export class VoiceManager {
     this.localStream = stream
     this.channelId = channelId
 
-    // aplica supressão de ruído antes de entrar (se falhar, segue com o mic cru)
-    if (this.noiseSuppression) {
-      await this.startProcessing()
-    }
+    // monta a cadeia de envio (supressão de ruído + volume do microfone);
+    // se falhar, segue com o mic cru
+    await this.startProcessing()
 
     const supabase = getSupabase()
     const ch = supabase.channel(`voice:${channelId}`, {
@@ -371,6 +382,15 @@ export class VoiceManager {
     if (el) el.volume = v
   }
 
+  /**
+   * Define o volume (0 a 1) do próprio microfone, aplicado em tempo real ao
+   * áudio enviado para os participantes (via nó de ganho na cadeia de envio).
+   */
+  setMicVolume(volume: number): void {
+    this.micVolume = Math.min(1, Math.max(0, volume))
+    if (this.sendGain) this.sendGain.gain.value = this.micVolume
+  }
+
   setLocalMuted(muted: boolean): void {
     this.localMuted = muted
     this.applyLocalTrackState()
@@ -404,23 +424,19 @@ export class VoiceManager {
     await this.rebuildSendTrack()
   }
 
-  /** A trilha que vai para os pares: a processada ou o mic cru. */
+  /** A trilha que vai para os pares: a processada (com ganho) ou o mic cru. */
   private getSendTrack(): MediaStreamTrack | null {
-    if (this.noiseSuppression && this.processedStream) {
-      const t = this.processedStream.getAudioTracks()[0]
-      if (t) return t
-    }
+    const t = this.processedStream?.getAudioTracks()[0]
+    if (t) return t
     return this.localStream?.getAudioTracks()[0] ?? null
   }
 
   /** (Re)constrói a cadeia de processamento e troca a trilha enviada. */
   private async rebuildSendTrack(): Promise<void> {
     await this.stopProcessing()
-    if (this.noiseSuppression) {
-      const ok = await this.startProcessing()
-      if (!ok) {
-        this.onError?.('Não foi possível ativar a redução de ruído neste dispositivo — usando áudio normal.')
-      }
+    const ok = await this.startProcessing()
+    if (!ok && this.noiseSuppression) {
+      this.onError?.('Não foi possível ativar a redução de ruído neste dispositivo — usando áudio normal.')
     }
     const track = this.getSendTrack()
     if (!track) return
@@ -439,16 +455,26 @@ export class VoiceManager {
       const ctx = new AudioContext()
       this.audioCtx = ctx
       if (ctx.state === 'suspended') void ctx.resume()
-      await ctx.audioWorklet.addModule(this.getNoiseModuleUrl())
-      const node = new AudioWorkletNode(ctx, 'noise-suppressor', {
-        numberOfInputs: 1,
-        numberOfOutputs: 1,
-        outputChannelCount: [1]
-      })
-      this.workletNode = node
+      const source = ctx.createMediaStreamSource(src)
+      // cadeia: fonte → [supressor de ruído?] → ganho (volume) → destino
+      let node: AudioNode = source
+      if (this.noiseSuppression) {
+        await ctx.audioWorklet.addModule(getNoiseSuppressorModuleUrl())
+        const worklet = new AudioWorkletNode(ctx, 'noise-suppressor', {
+          numberOfInputs: 1,
+          numberOfOutputs: 1,
+          outputChannelCount: [1]
+        })
+        this.workletNode = worklet
+        source.connect(worklet)
+        node = worklet
+      }
+      const gain = ctx.createGain()
+      gain.gain.value = this.micVolume
+      node.connect(gain)
+      this.sendGain = gain
       const dest = ctx.createMediaStreamDestination()
-      ctx.createMediaStreamSource(src).connect(node)
-      node.connect(dest)
+      gain.connect(dest)
       this.processedStream = dest.stream
       return true
     } catch {
@@ -460,6 +486,7 @@ export class VoiceManager {
   private async stopProcessing(): Promise<void> {
     this.processedStream?.getTracks().forEach((t) => t.stop())
     this.processedStream = null
+    this.sendGain = null
     if (this.workletNode) {
       try {
         this.workletNode.disconnect()
@@ -472,13 +499,6 @@ export class VoiceManager {
       void this.audioCtx.close().catch(() => undefined)
       this.audioCtx = null
     }
-  }
-
-  private getNoiseModuleUrl(): string {
-    if (this.noiseModuleUrl) return this.noiseModuleUrl
-    const blob = new Blob([NOISE_WORKLET_SOURCE], { type: 'application/javascript' })
-    this.noiseModuleUrl = URL.createObjectURL(blob)
-    return this.noiseModuleUrl
   }
 
   // ------------------------------------------------------------

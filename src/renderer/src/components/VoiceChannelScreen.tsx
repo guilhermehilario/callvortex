@@ -1,6 +1,7 @@
 import type { Channel } from '../lib/types'
 import { useApp } from '../lib/useApp'
 import Avatar from './Avatar'
+import { HeadphonesIcon, HeadphonesOffIcon, MicIcon, MicOffIcon, PhoneOffIcon, VolumeHighIcon, VolumeMuteIcon } from './Icons'
 import MicPicker from './MicPicker'
 import SignalBars from './SignalBars'
 
@@ -64,13 +65,14 @@ export default function VoiceChannelScreen({ channel }: { channel: Channel }): R
                     </span>
                     {!isMe && (
                       <div className="voice-member-volume">
-                        <span className="voice-member-vol-icon">{vol === 0 ? '🔇' : '🔊'}</span>
+                        <span className="voice-member-vol-icon">{vol === 0 ? <VolumeMuteIcon size={14} /> : <VolumeHighIcon size={14} />}</span>
                         <input
                           type="range"
                           min={0}
                           max={100}
                           value={vol}
                           onChange={(e) => setPeerVolume(m.userId, Number(e.target.value) / 100)}
+                          style={{ '--fill': `${vol}%` } as React.CSSProperties}
                           title={`Volume de ${m.username}`}
                         />
                         <span className="voice-member-vol-value">{vol}%</span>
@@ -88,13 +90,13 @@ export default function VoiceChannelScreen({ channel }: { channel: Channel }): R
         {joined ? (
           <div className="voice-screen-controls">
             <button className={`voice-control ${voiceMuted ? 'active' : ''}`} title={voiceMuted ? 'Ativar microfone' : 'Silenciar microfone'} onClick={toggleVoiceMute}>
-              {voiceMuted ? '🔇' : '🎤'}
+              {voiceMuted ? <MicOffIcon size={20} /> : <MicIcon size={20} />}
             </button>
             <button className={`voice-control ${voiceDeafened ? 'active' : ''}`} title={voiceDeafened ? 'Ouvir de novo' : 'Ficar surdo (sem som)'} onClick={toggleVoiceDeafen}>
-              🎧
+              {voiceDeafened ? <HeadphonesOffIcon size={20} /> : <HeadphonesIcon size={20} />}
             </button>
             <button className="voice-control leave" title="Sair do canal de voz" onClick={() => void leaveVoice()}>
-              📞
+              <PhoneOffIcon size={20} />
             </button>
           </div>
         ) : (

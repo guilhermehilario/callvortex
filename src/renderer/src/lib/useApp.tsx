@@ -69,6 +69,8 @@ interface AppContextValue {
   peerVolumes: Record<string, number>
   setPeerVolume: (userId: string, volume: number) => void
   peerSignals: Record<string, number>
+  micVolume: number
+  setMicVolume: (volume: number) => void
   noiseSuppression: boolean
   setNoiseSuppression: (enabled: boolean) => Promise<void>
   joinVoice: (channelId: string) => Promise<void>
@@ -147,6 +149,14 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
   const [noiseSuppression, setNoiseSuppressionState] = useState<boolean>(() => {
     const v = localStorage.getItem(NOISE_SUPPRESSION_KEY)
     return v === null ? true : v === '1'
+  })
+  const [micVolume, setMicVolumeState] = useState<number>(() => {
+    try {
+      const v = Number(localStorage.getItem('mic-volume'))
+      return Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 1
+    } catch {
+      return 1
+    }
   })
   const [peerSignals, setPeerSignals] = useState<Record<string, number>>({})
   const profileRef = useRef<Profile | null>(null)
@@ -477,6 +487,7 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
           setChannels(chs)
           setScreen({ type: 'server', serverId: server.id, channelId: ch.id })
           await voiceManagerRef.current!.join(ch.id, profile, selectedMicId)
+          voiceManagerRef.current!.setMicVolume(micVolume)
           setVoiceChannelId(ch.id)
           setVoiceMuted(false)
           setVoiceDeafened(false)
@@ -491,7 +502,7 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
     } else {
       void selectServer(servers[0].id)
     }
-  }, [authState, dataReady, screen, servers, profile, selectServer, notify])
+  }, [authState, dataReady, screen, servers, profile, micVolume, selectServer, notify])
 
   const openModal = useCallback((m: Exclude<ModalType, null>) => setModal(m), [])
   const closeModal = useCallback(() => setModal(null), [])
@@ -722,6 +733,7 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
       const serverId = screen?.type === 'server' ? screen.serverId : null
       try {
         await voiceManagerRef.current!.join(channelId, profile, selectedMicId)
+        voiceManagerRef.current!.setMicVolume(micVolume)
         setVoiceChannelId(channelId)
         setVoiceMuted(false)
         setVoiceDeafened(false)
@@ -733,7 +745,7 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
         notify('error', e instanceof Error ? e.message : 'Erro ao entrar no canal de voz')
       }
     },
-    [profile, selectedMicId, screen, notify]
+    [profile, selectedMicId, micVolume, screen, notify]
   )
 
   const leaveVoice = useCallback(async () => {
@@ -785,6 +797,17 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
       // armazenamento indisponível — segue só em memória
     }
     await voiceManagerRef.current?.setNoiseSuppression(enabled)
+  }, [])
+
+  const setMicVolume = useCallback((volume: number) => {
+    const v = Math.min(1, Math.max(0, volume))
+    setMicVolumeState(v)
+    try {
+      localStorage.setItem('mic-volume', String(v))
+    } catch {
+      // armazenamento indisponível — segue só em memória
+    }
+    voiceManagerRef.current?.setMicVolume(v)
   }, [])
 
   const setPeerVolume = useCallback((userId: string, volume: number) => {
@@ -844,6 +867,8 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
       peerVolumes,
       setPeerVolume,
       peerSignals,
+      micVolume,
+      setMicVolume,
       noiseSuppression,
       setNoiseSuppression,
       joinVoice,
@@ -897,6 +922,8 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
       peerVolumes,
       setPeerVolume,
       peerSignals,
+      micVolume,
+      setMicVolume,
       noiseSuppression,
       setNoiseSuppression,
       joinVoice,
