@@ -267,6 +267,20 @@ function VoiceConnectedPanel(): React.JSX.Element | null {
   const [micSettingsOpen, setMicSettingsOpen] = useState(false)
   const [headphoneSettingsOpen, setHeadphoneSettingsOpen] = useState(false)
 
+  // abrir um card fecha o outro (comportamento acordeão)
+  const toggleMicSettings = (): void => {
+    setMicSettingsOpen((v) => {
+      if (!v) setHeadphoneSettingsOpen(false)
+      return !v
+    })
+  }
+  const toggleHeadphoneSettings = (): void => {
+    setHeadphoneSettingsOpen((v) => {
+      if (!v) setMicSettingsOpen(false)
+      return !v
+    })
+  }
+
   if (!voiceChannelId || !profile) return null
   const channel = channels.find((c) => c.id === voiceChannelId)
   const signalWord = mySignal === 0 ? 'conectando' : mySignal <= 1 ? 'ruim' : mySignal === 2 ? 'regular' : mySignal === 3 ? 'bom' : 'excelente'
@@ -298,8 +312,8 @@ function VoiceConnectedPanel(): React.JSX.Element | null {
         </button>
       </div>
 
-      {micSettingsOpen && <MicPicker onToggleCollapsed={() => setMicSettingsOpen(false)} />}
-      {headphoneSettingsOpen && <OutputPicker onToggleCollapsed={() => setHeadphoneSettingsOpen(false)} />}
+      {micSettingsOpen && <MicPicker />}
+      {headphoneSettingsOpen && <OutputPicker />}
 
       <div className="voice-connected-controls">
         <div className="voice-control-group">
@@ -313,7 +327,7 @@ function VoiceConnectedPanel(): React.JSX.Element | null {
           <button
             className={`control-settings-toggle ${micSettingsOpen ? 'open' : ''}`}
             title={micSettingsOpen ? 'Ocultar configurações do microfone' : 'Abrir configurações do microfone'}
-            onClick={() => setMicSettingsOpen((v) => !v)}
+            onClick={toggleMicSettings}
           >
             <ChevronDownIcon size={12} />
           </button>
@@ -329,7 +343,7 @@ function VoiceConnectedPanel(): React.JSX.Element | null {
           <button
             className={`control-settings-toggle ${headphoneSettingsOpen ? 'open' : ''}`}
             title={headphoneSettingsOpen ? 'Ocultar configurações do fone de ouvido' : 'Abrir configurações do fone de ouvido'}
-            onClick={() => setHeadphoneSettingsOpen((v) => !v)}
+            onClick={toggleHeadphoneSettings}
           >
             <ChevronDownIcon size={12} />
           </button>

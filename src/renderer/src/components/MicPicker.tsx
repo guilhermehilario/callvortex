@@ -12,12 +12,7 @@ const LEVEL_HEIGHTS = [25, 35, 45, 55, 65, 75, 85, 95, 95, 85, 75, 65, 55, 45, 3
  * e tem um botão "Testar" que mostra a barra de nível — assim dá para
  * confirmar que o mic capta som antes de entrar no canal de voz.
  */
-interface MicPickerProps {
-  /** chamado quando o usuário recolhe pelo cabeçalho (ex.: esconder o card no painel de voz) */
-  onToggleCollapsed?: () => void
-}
-
-export default function MicPicker({ onToggleCollapsed }: MicPickerProps = {}): React.JSX.Element {
+export default function MicPicker(): React.JSX.Element {
   const {
     microphones,
     selectedMicId,
@@ -34,8 +29,6 @@ export default function MicPicker({ onToggleCollapsed }: MicPickerProps = {}): R
   const [testing, setTesting] = useState(false)
   const [testLevel, setTestLevel] = useState(0)
   const [testError, setTestError] = useState<string | null>(null)
-  // recolher as configurações quando não precisar mais usar
-  const [collapsed, setCollapsed] = useState(false)
   const streamRef = useRef<MediaStream | null>(null)
   const rafRef = useRef<number | null>(null)
   const ctxRef = useRef<AudioContext | null>(null)
@@ -50,13 +43,6 @@ export default function MicPicker({ onToggleCollapsed }: MicPickerProps = {}): R
     setTesting(false)
     setTestLevel(0)
     setTestError(null)
-  }
-
-  const toggleCollapsed = (): void => {
-    // ao ocultar, encerra o teste para o retorno de áudio não ficar tocando
-    if (!collapsed) stopTest()
-    if (onToggleCollapsed) onToggleCollapsed()
-    else setCollapsed((v) => !v)
   }
 
   useEffect(() => {
@@ -141,22 +127,13 @@ export default function MicPicker({ onToggleCollapsed }: MicPickerProps = {}): R
   return (
     <div className="mic-picker">
       <div className="mic-picker-header">
-        <button
-          className="mic-picker-toggle"
-          onClick={toggleCollapsed}
-          title={collapsed ? 'Mostrar configurações do microfone' : 'Ocultar configurações do microfone'}
-        >
-          <span className="mic-picker-label">Microfone</span>
-          <ChevronDownIcon size={14} className={`mic-picker-chevron ${collapsed ? 'collapsed' : ''}`} />
-        </button>
+        <span className="mic-picker-label">Microfone</span>
         <button className="mic-picker-refresh" title="Atualizar lista de dispositivos" onClick={() => void loadMicrophones()}>
           <RefreshIcon size={14} />
         </button>
       </div>
 
-      {!collapsed && (
-        <>
-          <div className="mic-picker-select-row">
+      <div className="mic-picker-select-row">
         <div className="mic-select-wrap">
           <select
             className="mic-picker-select"
@@ -212,10 +189,8 @@ export default function MicPicker({ onToggleCollapsed }: MicPickerProps = {}): R
         </label>
       </div>
 
-          {testing && <div className="mic-test-hint">Você está ouvindo seu microfone (retorno com 0,5 s de atraso para evitar microfonia) — fale para conferir.</div>}
-          {testError && <div className="mic-test-error">{testError}</div>}
-        </>
-      )}
+      {testing && <div className="mic-test-hint">Você está ouvindo seu microfone (retorno com 0,5 s de atraso para evitar microfonia) — fale para conferir.</div>}
+      {testError && <div className="mic-test-error">{testError}</div>}
     </div>
   )
 }
