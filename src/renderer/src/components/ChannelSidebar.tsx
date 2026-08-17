@@ -238,8 +238,8 @@ export default function ChannelSidebar(): React.JSX.Element {
 
 /**
  * Painel "em chamada" na base da sidebar (estilo Discord): mostra o sinal da
- * sua conexão com os botões de voz ao lado e o microfone selecionado abaixo.
- * Só aparece enquanto você estiver conectado a um canal de voz.
+ * sua conexão, o seletor de microfone e, na parte de baixo, os botões de voz
+ * (mudo, surdo e sair). Só aparece enquanto você estiver conectado a um canal de voz.
  */
 function VoiceConnectedPanel(): React.JSX.Element | null {
   const {
