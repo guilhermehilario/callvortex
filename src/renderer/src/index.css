@@ -994,6 +994,28 @@ button {
   align-items: center;
   justify-content: space-between;
 }
+.mic-picker-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  color: var(--text-muted);
+  transition: background 0.15s, color 0.15s;
+}
+.mic-picker-toggle:hover {
+  background: var(--bg-modifier-hover);
+  color: var(--text-normal);
+}
+.mic-picker-toggle .mic-picker-label {
+  color: inherit;
+}
+.mic-picker-chevron {
+  transition: transform 0.15s;
+}
+.mic-picker-chevron.collapsed {
+  transform: rotate(-90deg);
+}
 .mic-picker-row {
   display: flex;
   align-items: center;

@@ -29,6 +29,8 @@ export default function MicPicker(): React.JSX.Element {
   const [testing, setTesting] = useState(false)
   const [testLevel, setTestLevel] = useState(0)
   const [testError, setTestError] = useState<string | null>(null)
+  // recolher as configurações quando não precisar mais usar
+  const [collapsed, setCollapsed] = useState(false)
   const streamRef = useRef<MediaStream | null>(null)
   const rafRef = useRef<number | null>(null)
   const ctxRef = useRef<AudioContext | null>(null)
@@ -43,6 +45,12 @@ export default function MicPicker(): React.JSX.Element {
     setTesting(false)
     setTestLevel(0)
     setTestError(null)
+  }
+
+  const toggleCollapsed = (): void => {
+    // ao ocultar, encerra o teste para o retorno de áudio não ficar tocando
+    if (!collapsed) stopTest()
+    setCollapsed((v) => !v)
   }
 
   useEffect(() => {
@@ -127,13 +135,22 @@ export default function MicPicker(): React.JSX.Element {
   return (
     <div className="mic-picker">
       <div className="mic-picker-header">
-        <span className="mic-picker-label">Microfone</span>
+        <button
+          className="mic-picker-toggle"
+          onClick={toggleCollapsed}
+          title={collapsed ? 'Mostrar configurações do microfone' : 'Ocultar configurações do microfone'}
+        >
+          <span className="mic-picker-label">Microfone</span>
+          <ChevronDownIcon size={14} className={`mic-picker-chevron ${collapsed ? 'collapsed' : ''}`} />
+        </button>
         <button className="mic-picker-refresh" title="Atualizar lista de dispositivos" onClick={() => void loadMicrophones()}>
           <RefreshIcon size={14} />
         </button>
       </div>
 
-      <div className="mic-picker-select-row">
+      {!collapsed && (
+        <>
+          <div className="mic-picker-select-row">
         <div className="mic-select-wrap">
           <select
             className="mic-picker-select"
@@ -189,8 +206,10 @@ export default function MicPicker(): React.JSX.Element {
         </label>
       </div>
 
-      {testing && <div className="mic-test-hint">Ouvindo o retorno do microfone (atraso de 0,5 s)…</div>}
-      {testError && <div className="mic-test-error">{testError}</div>}
+          {testing && <div className="mic-test-hint">Ouvindo o retorno do microfone (atraso de 0,5 s)…</div>}
+          {testError && <div className="mic-test-error">{testError}</div>}
+        </>
+      )}
     </div>
   )
 }

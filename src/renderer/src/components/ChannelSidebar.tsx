@@ -320,7 +320,7 @@ function VoiceConnectedPanel(): React.JSX.Element | null {
 }
 
 function UserPanel(): React.JSX.Element {
-  const { profile, onlineUsers, voiceMuted, voiceDeafened, toggleVoiceMute, toggleVoiceDeafen, logout, updateAvatarUrl, notify } = useApp()
+  const { profile, onlineUsers, logout, updateAvatarUrl, notify } = useApp()
   const fileRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
   if (!profile) return <div className="user-panel" />
@@ -366,20 +366,6 @@ function UserPanel(): React.JSX.Element {
         <span className="user-status">{uploading ? 'Enviando foto…' : online ? 'Online' : 'Offline'}</span>
       </div>
       <div className="user-actions">
-        <button
-          className={`user-action ${voiceMuted ? 'active' : ''}`}
-          title={voiceMuted ? 'Ativar microfone' : 'Silenciar microfone'}
-          onClick={toggleVoiceMute}
-        >
-          {voiceMuted ? <MicOffIcon size={18} /> : <MicIcon size={18} />}
-        </button>
-        <button
-          className={`user-action ${voiceDeafened ? 'active' : ''}`}
-          title={voiceDeafened ? 'Ouvir de novo' : 'Ficar surdo'}
-          onClick={toggleVoiceDeafen}
-        >
-          {voiceDeafened ? <HeadphonesOffIcon size={18} /> : <HeadphonesIcon size={18} />}
-        </button>
         <button className="user-action" title="Configurações">
           <GearIcon size={18} />
         </button>
