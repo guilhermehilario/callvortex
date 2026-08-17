@@ -67,6 +67,7 @@ Gera um instalador e uma versão portátil na pasta `release/`. Seus amigos prec
 - **`docs/RESOLUCAO-DE-PROBLEMAS.md`** — todos os erros já encontrados e como resolver
 - **`docs/DESATIVAR-CONFIRMACAO-EMAIL.md`** — passo a passo (4 passos) para desligar a confirmação de e-mail e resolver o erro "email rate limit exceeded" ao criar conta
 - **`CONFIGURACAO.md`** — onde achar as chaves do Supabase e preencher o `.env`
+- **`ATUALIZAR-SUPABASE.md`** — ⬆️ como aplicar as mudanças novas no Supabase sem perder os dados já salvos
 - **`docs/COMO-FUNCIONA.md`** — análise da arquitetura (nuvem vs P2P, papel do criador/host)
 - **`docs/GUIA-DO-CRIADOR.md`** — passo a passo para você criar a sala e enviar o `.exe` ao amigo
 - **`docs/GUIA-DO-AMIGO.md`** — o que o amigo precisa fazer (abrir o `.exe`, criar conta, entrar pelo código)
