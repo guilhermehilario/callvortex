@@ -7,7 +7,7 @@ conexão com seu amigo. Detalhes em cada guia específico.
 
 ## O que é o projeto
 
-**Discord Clone** — app desktop (Electron + React) de chat por texto e voz
+**CallVortex** — app desktop (Electron + React) de chat por texto e voz
 estilo Discord, para conversar com amigos. O "servidor" invisível é um projeto
 **Supabase grátis** (contas, dados, mensagens em tempo real); o **áudio é ponto
 a ponto** (WebRTC), com STUN + TURN público já configurados.
@@ -24,7 +24,7 @@ a ponto** (WebRTC), com STUN + TURN público já configurados.
 | `supabase/schema.sql` | Cria tabelas + segurança + realtime (rodar 1x no SQL Editor) |
 | `supabase/migration-avatars-emojis.sql` | Fotos de perfil + emojis (se já rodou o schema antigo) |
 | `supabase/migration-voice.sql` | Canais de voz (se já rodou o schema antigo) |
-| `release/Discord Clone 0.1.2.exe` | **O arquivo para enviar ao amigo** (87 MB, portátil) |
+| `release/CallVortex 0.1.2.exe` | **O arquivo para enviar ao amigo** (87 MB, portátil) |
 
 ## Comandos
 
@@ -32,7 +32,7 @@ a ponto** (WebRTC), com STUN + TURN público já configurados.
 npm install        # 1ª vez
 npm run dev        # rodar em desenvolvimento (lê o .env)
 npm run typecheck  # checar erros de tipo
-npm run dist       # gerar o .exe (release/Discord Clone 0.1.2.exe)
+npm run dist       # gerar o .exe (release/CallVortex 0.1.2.exe)
 ```
 
 > ⚠️ O `.exe` grava as chaves do `.env` **dentro dele** no momento do build.

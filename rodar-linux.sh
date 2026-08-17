@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================
-#  rodar-linux.sh — Discord Clone no Ubuntu/Debian
+#  rodar-linux.sh — CallVortex no Ubuntu/Debian
 #
 #  Uso:
 #    ./rodar-linux.sh          # instala dependências e roda o app (modo dev)
@@ -12,7 +12,7 @@ MODE="${1:-dev}"
 cd "$(dirname "$0")"
 
 echo "====================================================="
-echo "  Discord Clone — Ubuntu/Debian"
+echo "  CallVortex — Ubuntu/Debian"
 echo "====================================================="
 
 # ------------------------------------------------------------
@@ -80,8 +80,8 @@ if [ "$MODE" = "dist" ]; then
   npm run dist
   echo ""
   echo "✅ Pronto! Em release/ você encontra:"
-  echo "   - Discord Clone-*.AppImage   → portátil (não precisa instalar)"
-  echo "   - discord-clone_*.deb        → instalável (sudo apt install ./arquivo.deb)"
+  echo "   - CallVortex-*.AppImage   → portátil (não precisa instalar)"
+  echo "   - callvortex_*.deb        → instalável (sudo apt install ./arquivo.deb)"
 else
   echo "Rodando o app… (pressione Ctrl+C para sair)"
   npm run dev

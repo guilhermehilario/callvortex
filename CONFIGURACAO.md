@@ -1,4 +1,4 @@
-# ⚙️ Configuração do Supabase — Discord Clone
+# ⚙️ Configuração do Supabase — CallVortex
 
 Este guia explica **onde encontrar** os valores das variáveis do arquivo `.env`
 (`VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`) e como deixar o app pronto.

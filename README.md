@@ -1,6 +1,6 @@
-# 💬 Discord Clone
+# 💬 CallVortex
 
-Clone do Discord para conversar com amigos em tempo real. Desktop (Electron + React + TypeScript) com backend Supabase (Postgres + Realtime + Auth).
+Chat por texto e voz em tempo real com seus amigos. Desktop (Electron + React + TypeScript) com backend Supabase (Postgres + Realtime + Auth).
 
 ## Funcionalidades
 

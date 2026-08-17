@@ -1,7 +1,7 @@
 {
-  "name": "callmecord",
+  "name": "callvortex",
   "version": "0.1.2",
-  "description": "Clone do Discord para conversar com amigos",
+  "description": "Chat por texto e voz para conversar com amigos",
   "main": "out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
@@ -11,7 +11,7 @@
     "dist": "electron-vite build && electron-builder"
   },
   "keywords": [],
-  "author": "Discord Clone",
+  "author": "CallVortex",
   "license": "ISC",
   "type": "commonjs",
   "private": true,
@@ -32,8 +32,8 @@
     "vite": "^7.3.6"
   },
   "build": {
-    "appId": "br.com.discordclone",
-    "productName": "Discord Clone",
+    "appId": "br.com.callvortex",
+    "productName": "CallVortex",
     "files": [
       "out/**/*"
     ],
@@ -53,8 +53,8 @@
         "deb"
       ],
       "category": "Network",
-      "maintainer": "Discord Clone",
-      "synopsis": "Clone do Discord para conversar com amigos",
+      "maintainer": "CallVortex",
+      "synopsis": "Chat por texto e voz (WebRTC) para conversar com amigos",
       "description": "App de conversa por texto e voz (WebRTC) para grupos de amigos, usando Supabase."
     }
   }

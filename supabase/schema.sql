@@ -1,5 +1,5 @@
 -- ============================================================
--- DISCORD CLONE — Schema Supabase
+-- CALLVORTEX — Schema Supabase
 -- Rode este arquivo inteiro no SQL Editor do seu projeto:
 --   Dashboard -> SQL Editor -> New query -> colar -> Run
 -- ============================================================

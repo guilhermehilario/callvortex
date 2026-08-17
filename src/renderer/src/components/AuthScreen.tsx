@@ -65,7 +65,7 @@ export default function AuthScreen(): React.JSX.Element {
       <div className="auth-card">
         <div className="auth-logo">
           <div className="auth-logo-icon">💬</div>
-          <h1>Discord Clone</h1>
+          <h1>CallVortex</h1>
           <p>Converse com seus amigos em tempo real</p>
         </div>
 

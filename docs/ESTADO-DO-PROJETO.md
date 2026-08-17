@@ -1,6 +1,6 @@
 # 📌 Estado do Projeto
 
-Situação atual do **Discord Clone** (atualizado em 16/08/2026).
+Situação atual do **CallVortex** (atualizado em 16/08/2026).
 
 ---
 
@@ -35,7 +35,7 @@ Situação atual do **Discord Clone** (atualizado em 16/08/2026).
 | Chaves do Supabase no `.env` | ✅ URL real `[REF_REMOVIDO].supabase.co` + chave publishable |
 | Conexão com o Supabase (auth) | ✅ `supabase-js` conecta (teste de login retornou erro esperado de credencial) |
 | Banco de dados | ✅ Tabela `profiles` existe (schema rodado) |
-| `.exe` gerado | ✅ `release/Discord Clone 0.1.2.exe` (87 MB) com chaves + TURN embutidos |
+| `.exe` gerado | ✅ `release/CallVortex 0.1.2.exe` (87 MB) com chaves + TURN embutidos |
 
 ## Configuração atual
 

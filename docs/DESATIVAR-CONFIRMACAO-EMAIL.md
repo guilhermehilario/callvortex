@@ -18,7 +18,7 @@ Quando o limite estoura, qualquer tentativa de criar conta falha com
 Acesse **https://supabase.com** e faça login com a conta que criou o projeto.
 
 Na tela inicial, **clique no seu projeto** (o nome que você escolheu ao
-criar, ex.: "discord-clone").
+criar, ex.: "callvortex").
 
 ### Passo 2 — Abrir as configurações de Autenticação
 
