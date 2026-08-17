@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useApp } from '../lib/useApp'
+import Logo from './Logo'
 
 export default function AuthScreen(): React.JSX.Element {
   const { login, register, notify, savedCredentials, storeCredentials, forgetCredentials } = useApp()
@@ -64,7 +65,7 @@ export default function AuthScreen(): React.JSX.Element {
     <div className="auth-bg">
       <div className="auth-card">
         <div className="auth-logo">
-          <div className="auth-logo-icon">💬</div>
+          <div className="auth-logo-icon"><Logo size={64} /></div>
           <h1>CallVortex</h1>
           <p>Converse com seus amigos em tempo real</p>
         </div>

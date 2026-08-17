@@ -90,8 +90,12 @@ button {
   margin-bottom: 24px;
 }
 .auth-logo-icon {
-  font-size: 44px;
-  margin-bottom: 8px;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .auth-logo h1 {
   font-size: 22px;

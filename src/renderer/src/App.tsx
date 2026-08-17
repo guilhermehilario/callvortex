@@ -6,13 +6,14 @@ import ChannelSidebar from './components/ChannelSidebar'
 import ChatArea from './components/ChatArea'
 import MemberList from './components/MemberList'
 import Modals from './components/Modals'
+import Logo from './components/Logo'
 
 function SetupScreen(): React.JSX.Element {
   return (
     <div className="auth-bg">
       <div className="auth-card">
         <div className="auth-logo">
-          <div className="auth-logo-icon">💬</div>
+          <div className="auth-logo-icon"><Logo size={64} /></div>
           <h1>Falta configurar o Supabase</h1>
           <p>Este app usa o Supabase como banco de dados e servidor em tempo real.</p>
         </div>
