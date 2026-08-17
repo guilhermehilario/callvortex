@@ -12,7 +12,13 @@ const LEVEL_HEIGHTS = [25, 35, 45, 55, 65, 75, 85, 95, 95, 85, 75, 65, 55, 45, 3
  * e tem um botão "Testar" que mostra a barra de nível — assim dá para
  * confirmar que o mic capta som antes de entrar no canal de voz.
  */
-export default function MicPicker(): React.JSX.Element {
+interface MicPickerProps {
+  /** estado controlado de fora (ex.: seta ao lado do microfone no painel de voz) */
+  collapsed?: boolean
+  onToggleCollapsed?: () => void
+}
+
+export default function MicPicker({ collapsed: collapsedProp, onToggleCollapsed }: MicPickerProps = {}): React.JSX.Element {
   const {
     microphones,
     selectedMicId,
@@ -29,8 +35,10 @@ export default function MicPicker(): React.JSX.Element {
   const [testing, setTesting] = useState(false)
   const [testLevel, setTestLevel] = useState(0)
   const [testError, setTestError] = useState<string | null>(null)
-  // recolher as configurações quando não precisar mais usar
-  const [collapsed, setCollapsed] = useState(false)
+  // recolher as configurações quando não precisar mais usar (estado interno
+  // usado quando o componente não é controlado de fora)
+  const [internalCollapsed, setInternalCollapsed] = useState(false)
+  const collapsed = collapsedProp ?? internalCollapsed
   const streamRef = useRef<MediaStream | null>(null)
   const rafRef = useRef<number | null>(null)
   const ctxRef = useRef<AudioContext | null>(null)
@@ -50,7 +58,8 @@ export default function MicPicker(): React.JSX.Element {
   const toggleCollapsed = (): void => {
     // ao ocultar, encerra o teste para o retorno de áudio não ficar tocando
     if (!collapsed) stopTest()
-    setCollapsed((v) => !v)
+    if (onToggleCollapsed) onToggleCollapsed()
+    else setInternalCollapsed((v) => !v)
   }
 
   useEffect(() => {

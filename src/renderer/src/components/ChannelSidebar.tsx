@@ -3,7 +3,7 @@ import { uploadAvatar } from '../lib/api'
 import type { Channel } from '../lib/types'
 import { useApp } from '../lib/useApp'
 import Avatar from './Avatar'
-import { ActivitiesIcon, BroadcastIcon, GearIcon, HeadphonesIcon, HeadphonesOffIcon, MicIcon, MicOffIcon, PhoneOffIcon, PowerIcon, RouterIcon, ScreenShareIcon, VideoIcon } from './Icons'
+import { ActivitiesIcon, BroadcastIcon, ChevronDownIcon, GearIcon, HeadphonesIcon, HeadphonesOffIcon, MicIcon, MicOffIcon, PhoneOffIcon, PowerIcon, RouterIcon, ScreenShareIcon, VideoIcon } from './Icons'
 import MicPicker from './MicPicker'
 import SignalBars from './SignalBars'
 
@@ -255,8 +255,6 @@ function VoiceConnectedPanel(): React.JSX.Element | null {
     toggleVoiceMute,
     toggleVoiceDeafen
   } = useApp()
-  if (!voiceChannelId || !profile) return null
-  const channel = channels.find((c) => c.id === voiceChannelId)
 
   // Sinal da minha conexão: média dos sinais medidos nas conexões WebRTC com
   // os outros participantes (RTT/perda de pacotes vistos do meu lado).
@@ -265,6 +263,10 @@ function VoiceConnectedPanel(): React.JSX.Element | null {
     if (values.length === 0) return 0
     return Math.round(values.reduce((a, b) => a + b, 0) / values.length)
   }, [peerSignals])
+  const [micSettingsOpen, setMicSettingsOpen] = useState(false)
+
+  if (!voiceChannelId || !profile) return null
+  const channel = channels.find((c) => c.id === voiceChannelId)
   const signalWord = mySignal === 0 ? 'conectando' : mySignal <= 1 ? 'ruim' : mySignal === 2 ? 'regular' : mySignal === 3 ? 'bom' : 'excelente'
 
   return (
@@ -294,16 +296,25 @@ function VoiceConnectedPanel(): React.JSX.Element | null {
         </button>
       </div>
 
-      <MicPicker />
+      <MicPicker collapsed={!micSettingsOpen} onToggleCollapsed={() => setMicSettingsOpen((v) => !v)} />
 
       <div className="voice-connected-controls">
-        <button
-          className={`voice-control ${voiceMuted ? 'active' : ''}`}
-          title={voiceMuted ? 'Ativar microfone' : 'Silenciar microfone'}
-          onClick={toggleVoiceMute}
-        >
-          {voiceMuted ? <MicOffIcon size={18} /> : <MicIcon size={18} />}
-        </button>
+        <div className="voice-control-group">
+          <button
+            className={`voice-control ${voiceMuted ? 'active' : ''}`}
+            title={voiceMuted ? 'Ativar microfone' : 'Silenciar microfone'}
+            onClick={toggleVoiceMute}
+          >
+            {voiceMuted ? <MicOffIcon size={18} /> : <MicIcon size={18} />}
+          </button>
+          <button
+            className={`mic-settings-toggle ${micSettingsOpen ? 'open' : ''}`}
+            title={micSettingsOpen ? 'Ocultar configurações do microfone' : 'Abrir configurações do microfone'}
+            onClick={() => setMicSettingsOpen((v) => !v)}
+          >
+            <ChevronDownIcon size={12} />
+          </button>
+        </div>
         <button
           className={`voice-control ${voiceDeafened ? 'active' : ''}`}
           title={voiceDeafened ? 'Ouvir de novo' : 'Ficar surdo'}

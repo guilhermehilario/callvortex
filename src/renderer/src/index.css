@@ -799,6 +799,38 @@ button {
   justify-content: center;
   transition: background 0.15s, color 0.15s;
 }
+/* grupo do microfone: botão + seta que abre as configurações */
+.voice-control-group {
+  flex: 1;
+  display: flex;
+  gap: 2px;
+  min-width: 0;
+}
+.mic-settings-toggle {
+  flex-shrink: 0;
+  width: 22px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--bg-primary);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+.mic-settings-toggle:hover {
+  background: var(--bg-modifier-active);
+  color: var(--text-normal);
+}
+.mic-settings-toggle.open {
+  color: var(--green);
+}
+.mic-settings-toggle svg {
+  transition: transform 0.15s;
+}
+.mic-settings-toggle.open svg {
+  transform: rotate(180deg);
+}
 .voice-connected-controls .voice-control:hover {
   background: var(--bg-modifier-active);
 }
