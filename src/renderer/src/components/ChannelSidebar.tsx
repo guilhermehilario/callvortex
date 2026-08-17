@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { uploadAvatar } from '../lib/api'
 import type { Channel } from '../lib/types'
 import { useApp } from '../lib/useApp'
@@ -251,19 +251,12 @@ function VoiceConnectedPanel(): React.JSX.Element | null {
     voiceChannelId,
     voiceMuted,
     voiceDeafened,
-    peerSignals,
+    internetPing,
+    internetQuality,
     leaveVoice,
     toggleVoiceMute,
     toggleVoiceDeafen
   } = useApp()
-
-  // Sinal da minha conexão: média dos sinais medidos nas conexões WebRTC com
-  // os outros participantes (RTT/perda de pacotes vistos do meu lado).
-  const mySignal = useMemo(() => {
-    const values = Object.values(peerSignals)
-    if (values.length === 0) return 0
-    return Math.round(values.reduce((a, b) => a + b, 0) / values.length)
-  }, [peerSignals])
   const [micSettingsOpen, setMicSettingsOpen] = useState(false)
   const [headphoneSettingsOpen, setHeadphoneSettingsOpen] = useState(false)
 
@@ -283,7 +276,9 @@ function VoiceConnectedPanel(): React.JSX.Element | null {
 
   if (!voiceChannelId || !profile) return null
   const channel = channels.find((c) => c.id === voiceChannelId)
-  const signalWord = mySignal === 0 ? 'conectando' : mySignal <= 1 ? 'ruim' : mySignal === 2 ? 'regular' : mySignal === 3 ? 'bom' : 'excelente'
+  const signalWord = internetQuality === 0 ? 'sem conexão' : internetQuality === 1 ? 'ruim' : internetQuality === 2 ? 'regular' : internetQuality === 3 ? 'bom' : 'excelente'
+  const pingText = internetPing === null ? '—' : `${internetPing} ms`
+  const signalQualityClass = internetQuality >= 3 ? 'good' : internetQuality === 2 ? 'ok' : 'bad'
 
   return (
     <div className="voice-connected-panel">
@@ -292,7 +287,7 @@ function VoiceConnectedPanel(): React.JSX.Element | null {
         <div className="voice-connection-text">
           <span className="voice-connection-title">Voz conectada</span>
           <span className="voice-connection-sub">
-            {channel?.name ?? 'Canal de voz'} · sinal {signalWord}
+            {channel?.name ?? 'Canal de voz'} · sinal {signalWord} · {pingText}
           </span>
         </div>
       </div>
@@ -307,7 +302,7 @@ function VoiceConnectedPanel(): React.JSX.Element | null {
         <button className="voice-quick-action" title="Atividades">
           <ActivitiesIcon size={18} />
         </button>
-        <button className="voice-quick-action" title="Sinal / roteador">
+        <button className={`voice-quick-action signal ${signalQualityClass}`} title={`Internet: sinal ${signalWord} · ${pingText}`}>
           <RouterIcon size={18} />
         </button>
       </div>

@@ -5,6 +5,8 @@ const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 export const supabaseReady = Boolean(url && anonKey)
 
+export const supabaseUrl = url
+
 let client: SupabaseClient | null = null
 
 export function getSupabase(): SupabaseClient {

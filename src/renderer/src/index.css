@@ -783,6 +783,16 @@ button {
   background: var(--bg-modifier-active);
   color: var(--text-normal);
 }
+/* sinal de internet ao vivo (qualidade pela cor do ícone) */
+.voice-quick-action.signal.good {
+  color: var(--green);
+}
+.voice-quick-action.signal.ok {
+  color: #f0b232;
+}
+.voice-quick-action.signal.bad {
+  color: var(--red);
+}
 /* controles de voz (mudo, surdo, sair) */
 .voice-connected-controls {
   display: flex;

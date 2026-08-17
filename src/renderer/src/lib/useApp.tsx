@@ -7,7 +7,7 @@ import React, {
   useRef,
   useState
 } from 'react'
-import { getSupabase } from './supabase'
+import { getSupabase, supabaseUrl } from './supabase'
 import * as api from './api'
 import { VoiceManager, getMicrophones, getOutputDevices } from './voice'
 import { playDeafenSound, playJoinSound, playLeaveSound, playMuteSound } from './sounds'
@@ -71,6 +71,8 @@ interface AppContextValue {
   peerSignals: Record<string, number>
   micVolume: number
   setMicVolume: (volume: number) => void
+  internetPing: number | null
+  internetQuality: number
   outputDevices: MediaDeviceInfo[]
   selectedOutputId: string | null
   outputVolume: number
@@ -164,6 +166,9 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
       return 1
     }
   })
+  // ping da conexão com o servidor do app (sinal de internet)
+  const [internetPing, setInternetPing] = useState<number | null>(null)
+  const internetQuality: number = internetPing === null ? 0 : internetPing < 80 ? 4 : internetPing < 150 ? 3 : internetPing < 300 ? 2 : 1
   const [outputDevices, setOutputDevices] = useState<MediaDeviceInfo[]>([])
   const [selectedOutputId, setSelectedOutputId] = useState<string | null>(() => {
     try {
@@ -836,6 +841,43 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
     voiceManagerRef.current?.setMicVolume(v)
   }, [])
 
+  // ------------------------------------------------------------
+  // Sinal de internet: mede o ping até o servidor do app a cada 5s
+  // ------------------------------------------------------------
+  const measurePing = useCallback(async (): Promise<number | null> => {
+    if (!supabaseUrl) return null
+    const start = performance.now()
+    try {
+      const ctrl = new AbortController()
+      const timer = setTimeout(() => ctrl.abort(), 4000)
+      // GET leve; qualquer resposta (mesmo 4xx) mede o round-trip até o servidor
+      await fetch(`${supabaseUrl}/rest/v1/?cv=${Date.now()}`, { cache: 'no-store', signal: ctrl.signal })
+      clearTimeout(timer)
+      return Math.round(performance.now() - start)
+    } catch {
+      return null
+    }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    const tick = async (): Promise<void> => {
+      const p = await measurePing()
+      if (cancelled) return
+      setInternetPing((prev) => {
+        if (p === null) return null
+        if (prev === null) return p
+        return Math.round(prev * 0.6 + p * 0.4) // média suave
+      })
+    }
+    void tick()
+    const iv = setInterval(() => void tick(), 5000)
+    return () => {
+      cancelled = true
+      clearInterval(iv)
+    }
+  }, [measurePing])
+
   const loadOutputDevices = useCallback(async () => {
     const devices = await getOutputDevices()
     setOutputDevices(devices)
@@ -929,6 +971,8 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
       peerSignals,
       micVolume,
       setMicVolume,
+      internetPing,
+      internetQuality,
       outputDevices,
       selectedOutputId,
       outputVolume,
@@ -990,6 +1034,8 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
       peerSignals,
       micVolume,
       setMicVolume,
+      internetPing,
+      internetQuality,
       outputDevices,
       selectedOutputId,
       outputVolume,
