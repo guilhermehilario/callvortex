@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { uploadAvatar } from '../lib/api'
 import type { Channel } from '../lib/types'
 import { useApp } from '../lib/useApp'
@@ -237,31 +237,35 @@ export default function ChannelSidebar(): React.JSX.Element {
 }
 
 /**
- * Painel "em chamada" na base da sidebar (estilo Discord): mostra o seu
- * avatar com os botões de voz ao lado e o microfone selecionado abaixo.
+ * Painel "em chamada" na base da sidebar (estilo Discord): mostra o sinal da
+ * sua conexão com os botões de voz ao lado e o microfone selecionado abaixo.
  * Só aparece enquanto você estiver conectado a um canal de voz.
  */
 function VoiceConnectedPanel(): React.JSX.Element | null {
   const {
     profile,
-    channels,
     voiceChannelId,
     voiceMuted,
     voiceDeafened,
+    peerSignals,
     leaveVoice,
     toggleVoiceMute,
     toggleVoiceDeafen
   } = useApp()
   if (!voiceChannelId || !profile) return null
-  const channel = channels.find((c) => c.id === voiceChannelId)
+
+  // Sinal da minha conexão: média dos sinais medidos nas conexões WebRTC com
+  // os outros participantes (RTT/perda de pacotes vistos do meu lado).
+  const mySignal = useMemo(() => {
+    const values = Object.values(peerSignals)
+    if (values.length === 0) return 0
+    return Math.round(values.reduce((a, b) => a + b, 0) / values.length)
+  }, [peerSignals])
 
   return (
     <div className="voice-connected-panel">
       <div className="voice-connected-main">
-        <Avatar name={profile.username} color={profile.avatar_color} size={32} url={profile.avatar_url} />
-        <div className="voice-connected-title" title={channel?.name ?? 'Canal de voz'}>
-          🔊 {channel?.name ?? 'Canal de voz'}
-        </div>
+        <SignalBars quality={mySignal} />
         <div className="voice-connected-controls">
           <button
             className={`voice-control ${voiceMuted ? 'active' : ''}`}
