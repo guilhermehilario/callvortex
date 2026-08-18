@@ -1,0 +1,217 @@
+/* ---------------------------------------------------------- */
+/* Chat                                                        */
+/* ---------------------------------------------------------- */
+.chat {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-primary);
+}
+.chat-header {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  gap: 8px;
+}
+.chat-title {
+  font-size: 15px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.chat-subtitle {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 16px 8px;
+}
+.chat-hint {
+  color: var(--text-muted);
+  font-size: 14px;
+  padding: 12px;
+  text-align: center;
+}
+
+.day-separator {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0 12px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+.day-separator::before,
+.day-separator::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #3a3c41;
+}
+
+.message-row {
+  position: relative;
+  display: flex;
+  gap: 12px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  margin: 2px -8px;
+}
+.message-row:hover {
+  background: var(--bg-modifier-hover);
+}
+.message-row.grouped {
+  margin-top: 0;
+}
+.message-avatar {
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+.message-body {
+  min-width: 0;
+  flex: 1;
+}
+.message-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+.message-author {
+  font-size: 14px;
+  font-weight: 600;
+}
+.message-time {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.message-content {
+  font-size: 15px;
+  line-height: 1.45;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+}
+.message-row.grouped .message-content {
+  padding-left: 52px;
+}
+.message-delete {
+  position: absolute;
+  right: 8px;
+  top: 4px;
+  font-size: 13px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  opacity: 0;
+  color: var(--text-muted);
+}
+.message-row:hover .message-delete {
+  opacity: 1;
+}
+.message-delete:hover {
+  color: var(--red);
+  background: var(--bg-modifier-active);
+}
+
+/* input */
+.chat-input-area {
+  position: relative;
+  padding: 0 16px 24px;
+  flex-shrink: 0;
+}
+.chat-input-box {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  background: var(--bg-input);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.chat-emoji-toggle {
+  font-size: 20px;
+  padding: 2px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.chat-emoji-toggle:hover {
+  background: var(--bg-modifier-hover);
+}
+.chat-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  color: var(--text-normal);
+  font-size: 15px;
+  line-height: 1.4;
+  max-height: 180px;
+  font-family: inherit;
+}
+.chat-input::placeholder {
+  color: #6d6f78;
+}
+.chat-input:disabled {
+  opacity: 0.6;
+}
+.emoji-panel {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 16px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 4px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  z-index: 30;
+}
+.emoji-btn {
+  font-size: 20px;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.emoji-btn:hover {
+  background: var(--bg-modifier-active);
+}
+.emoji-img {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+}
+.emoji-panel-section {
+  grid-column: 1 / -1;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-muted);
+  margin: 4px 0 2px;
+}
+.emoji-panel-section:first-child {
+  margin-top: 0;
+}
+.inline-emoji {
+  width: 22px;
+  height: 22px;
+  vertical-align: -5px;
+  margin: 0 1px;
+}

@@ -1,0 +1,32 @@
+/* ---------------------------------------------------------- */
+/* Layout principal                                            */
+/* ---------------------------------------------------------- */
+.app-shell {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.loading-screen {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  color: var(--text-muted);
+  background: var(--bg-tertiary);
+}
+.loading-spinner {
+  width: 36px;
+  height: 36px;
+  border: 4px solid var(--bg-modifier-active);
+  border-top-color: var(--blurple);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

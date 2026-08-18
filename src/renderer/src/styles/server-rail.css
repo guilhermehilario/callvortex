@@ -1,0 +1,103 @@
+/* ---------------------------------------------------------- */
+/* Barra de servidores                                         */
+/* ---------------------------------------------------------- */
+.server-rail {
+  width: 72px;
+  background: var(--bg-tertiary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 0;
+  gap: 8px;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+.server-rail-top {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.rail-divider {
+  width: 32px;
+  height: 2px;
+  background: #35363c;
+  border-radius: 1px;
+}
+.rail-servers {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.rail-actions {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding-top: 8px;
+}
+.rail-btn {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  border-radius: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-radius 0.15s, background 0.15s;
+}
+.rail-btn:hover {
+  border-radius: 16px;
+}
+.rail-btn.active {
+  border-radius: 16px;
+}
+.rail-btn.active::before {
+  content: '';
+  position: absolute;
+  left: -12px;
+  width: 4px;
+  height: 32px;
+  background: #fff;
+  border-radius: 0 4px 4px 0;
+}
+.rail-dm {
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+}
+.rail-dm:hover,
+.rail-dm.active {
+  background: var(--blurple);
+  color: #fff;
+}
+.rail-dm-icon {
+  font-size: 22px;
+}
+.rail-add {
+  background: var(--bg-secondary);
+  color: var(--green);
+}
+.rail-add:hover {
+  background: var(--green);
+  color: #fff;
+}
+.rail-tooltip {
+  display: none;
+  position: absolute;
+  left: 56px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--bg-floating);
+  color: var(--text-normal);
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  white-space: nowrap;
+  z-index: 50;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+.rail-btn:hover .rail-tooltip {
+  display: block;
+}

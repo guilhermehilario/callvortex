@@ -1,0 +1,156 @@
+/* ---------------------------------------------------------- */
+/* Modais                                                      */
+/* ---------------------------------------------------------- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.modal-card {
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  padding: 24px;
+  width: 420px;
+  max-width: calc(100vw - 40px);
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+}
+.modal-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+.modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.modal-hint {
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.modal-input {
+  background: var(--bg-floating);
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 10px 12px;
+  color: var(--text-normal);
+  font-size: 15px;
+  outline: none;
+  width: 100%;
+}
+.modal-input:focus {
+  border-color: var(--blurple);
+}
+.code-input {
+  text-align: center;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 6px;
+  text-transform: uppercase;
+}
+.modal-input-prefix {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg-floating);
+  border-radius: 4px;
+  padding: 0 12px;
+}
+.modal-input-prefix span {
+  color: var(--text-muted);
+  font-size: 16px;
+}
+.modal-input-prefix .modal-input {
+  background: transparent;
+  padding-left: 0;
+}
+.modal-error {
+  background: rgba(242, 63, 67, 0.15);
+  border: 1px solid rgba(242, 63, 67, 0.4);
+  color: #ff7b7e;
+  border-radius: 4px;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+.dm-results {
+  display: flex;
+  flex-direction: column;
+  max-height: 240px;
+  overflow-y: auto;
+  gap: 2px;
+}
+.dm-result {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+}
+.dm-result:hover {
+  background: var(--blurple);
+  color: #fff;
+}
+
+/* gerenciar emojis do servidor */
+.emoji-add-row {
+  display: flex;
+  gap: 8px;
+}
+.emoji-add-row .modal-input {
+  flex: 1;
+}
+.emoji-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 260px;
+  overflow-y: auto;
+  gap: 2px;
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+.emoji-list-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 4px;
+}
+.emoji-list-item:hover {
+  background: var(--bg-modifier-hover);
+}
+.emoji-list-img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+.emoji-list-name {
+  font-size: 14px;
+  font-weight: 600;
+}
+.emoji-list-delete {
+  margin-left: auto;
+  color: var(--text-muted);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+.emoji-list-delete:hover {
+  color: var(--red);
+  background: var(--bg-modifier-active);
+}

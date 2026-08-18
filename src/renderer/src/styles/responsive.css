@@ -1,0 +1,66 @@
+/* ---------------------------------------------------------- */
+/* Responsividade                                               */
+/* ---------------------------------------------------------- */
+/* telas médias: colunas laterais um pouco mais estreitas */
+@media (max-width: 1150px) {
+  .sidebar {
+    width: 210px;
+  }
+  .member-list {
+    width: 200px;
+  }
+}
+
+/* telas estreitas: esconde a lista de membros (igual ao Discord) e
+   dá mais espaço para o chat */
+@media (max-width: 960px) {
+  .member-list {
+    display: none;
+  }
+  .sidebar {
+    width: 190px;
+  }
+}
+
+/* janelas bem estreitas: sidebar mínima, emoji panel com menos colunas */
+@media (max-width: 800px) {
+  .sidebar {
+    width: 170px;
+  }
+  .emoji-panel {
+    grid-template-columns: repeat(6, 1fr);
+  }
+  .chat-header,
+  .chat-messages {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .chat-input-area {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .voice-screen-body {
+    padding: 16px;
+  }
+  .toast {
+    left: 80px;
+    max-width: calc(100vw - 96px);
+  }
+}
+
+/* janelas baixas: modais e telas centrais rolam em vez de cortar */
+@media (max-height: 640px) {
+  .voice-screen-body {
+    justify-content: flex-start;
+    padding-top: 24px;
+  }
+  .voice-screen-icon {
+    font-size: 44px;
+  }
+}
+
+@media (max-height: 560px) {
+  .voice-members {
+    max-height: 30vh;
+  }
+}

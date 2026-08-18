@@ -1,0 +1,21 @@
+/* ---------------------------------------------------------- */
+/* Tokens de design (variáveis do tema)                        */
+/* ---------------------------------------------------------- */
+:root {
+  --bg-tertiary: #1e1f22;
+  --bg-secondary: #2b2d31;
+  --bg-primary: #313338;
+  --bg-floating: #111214;
+  --bg-modifier-hover: rgba(255, 255, 255, 0.06);
+  --bg-modifier-active: rgba(255, 255, 255, 0.09);
+  --bg-input: #383a40;
+  --text-normal: #dbdee1;
+  --text-muted: #949ba4;
+  --blurple: #5865f2;
+  --blurple-hover: #4752c4;
+  --green: #23a55a;
+  --red: #f23f43;
+  --wine: #b03a3e;
+  --border: rgba(0, 0, 0, 0.2);
+  --font: 'Segoe UI', 'Helvetica Neue', system-ui, -apple-system, sans-serif;
+}

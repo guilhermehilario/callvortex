@@ -1,6 +1,6 @@
 # 📌 Estado do Projeto
 
-Situação atual do **CallVortex** (atualizado em 16/08/2026).
+Situação atual do **CallVortex** (atualizado em 18/08/2026).
 
 ---
 
@@ -21,6 +21,8 @@ Situação atual do **CallVortex** (atualizado em 16/08/2026).
   - 🔊 **Volume individual por participante**: lista de integrantes com slider de volume para cada um (guardado entre chamadas)
   - 📶 **Sinal de rede por participante**: barras de sinal (1–4, estilo Discord) medidas via WebRTC `getStats` (RTT + perda de pacotes)
   - 🔁 **Volta automática à sala**: se fechou o app dentro de um canal de voz e reabriu em até **20 minutos**, ele entra de novo sozinho (sessão ativa)
+  - 👁️ **Presença por canal**: ver quem está em cada canal de voz mesmo sem entrar na sala (sidebar e tela do canal)
+  - ⏱️ **Relógio de atividade da sala**: há quanto tempo o canal está ativo (horas/minutos/segundos), em verde e alinhado à direita na sidebar
 - 🗑️ Excluir mensagens, canais e servidores (dono)
 - 📦 `.exe` portátil para distribuir (sem instalação)
 
@@ -41,11 +43,17 @@ Situação atual do **CallVortex** (atualizado em 16/08/2026).
 
 - **Projeto Supabase:** `[REF_REMOVIDO]` (chaves no `.env` — não
   compartilhar o arquivo)
+- **Supabase CLI:** instalado e vinculado ao projeto; migrations versionadas em
+  `supabase/migrations/` (aplicadas via `db push`): `voice_sessions` e `fix_channels_policies`
+- **Backup:** workflow diário `.github/workflows/backup-db.yml` + script local
+  `scripts/backup-db.sh` criados (setup do GitHub pendente — ver `TAREFAS-PENDENTES.md`)
 - **Alvo do build:** `portable` (o alvo NSIS falha nesta máquina por bloqueio
   do App Control — ver `RESOLUCAO-DE-PROBLEMAS.md` seção 5)
 - **Electron:** 43.4.0 · **React:** 19 · **Vite:** 7 · **supabase-js:** 2.112
 
 ## Pendências / melhorias futuras
+
+> Lista de trabalho atual: **`TAREFAS-PENDENTES.md`** (git push, setup do backup no GitHub, Docker, CI, testes manuais).
 
 - [ ] **Assinar o `.exe`** com certificado de código (elimina o bloqueio do
       Smart App Control em qualquer máquina)

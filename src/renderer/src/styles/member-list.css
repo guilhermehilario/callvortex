@@ -1,0 +1,102 @@
+/* ---------------------------------------------------------- */
+/* Lista de membros                                            */
+/* ---------------------------------------------------------- */
+.member-list {
+  width: 240px;
+  background: var(--bg-secondary);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+.member-list-header {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+/* participantes dentro da sidebar, abaixo do canal de voz (estilo Discord) */
+.voice-channel-block {
+  min-width: 0;
+}
+.voice-channel-members {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 2px 0 4px 6px;
+}
+.voice-channel-member {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  color: var(--text-muted);
+  font-size: 13px;
+  min-width: 0;
+}
+.voice-channel-member:hover {
+  background: var(--bg-modifier-hover);
+  color: var(--text-normal);
+}
+.voice-channel-member-avatar {
+  position: relative;
+  flex-shrink: 0;
+  line-height: 0;
+  border-radius: 50%;
+}
+.voice-channel-member.speaking .voice-channel-member-avatar {
+  box-shadow: 0 0 0 2px var(--green);
+}
+.voice-channel-member-signal {
+  position: absolute;
+  bottom: -4px;
+  right: -2px;
+  background: var(--bg-secondary);
+  border-radius: 3px;
+  padding: 1px;
+  line-height: 0;
+}
+.voice-channel-member-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.voice-channel-more {
+  padding: 2px 8px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.member-list-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+.member-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 4px;
+}
+.member-item:hover {
+  background: var(--bg-modifier-hover);
+}
+.member-name {
+  font-size: 14px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.member-name.muted {
+  color: var(--text-muted);
+  font-weight: 500;
+}

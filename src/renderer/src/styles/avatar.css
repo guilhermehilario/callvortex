@@ -1,0 +1,32 @@
+/* ---------------------------------------------------------- */
+/* Avatar                                                      */
+/* ---------------------------------------------------------- */
+.avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+.avatar {
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+.avatar-img {
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+.avatar-status {
+  position: absolute;
+  border-radius: 50%;
+  border: 2px solid var(--bg-secondary);
+}
+.avatar-status-online {
+  background: var(--green);
+}
+.avatar-status-offline {
+  background: #80848e;
+}
