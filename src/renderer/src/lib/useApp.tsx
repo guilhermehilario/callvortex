@@ -7,134 +7,16 @@ import React, {
   useRef,
   useState
 } from 'react'
-import type { RealtimeChannel } from '@supabase/supabase-js'
-import { getSupabase, getSupabaseObserver, supabaseUrl } from './supabase'
+import { getSupabase } from './supabase'
 import * as api from './api'
-import { VoiceManager, getMicrophones, getOutputDevices } from './voice'
-import { playDeafenSound, playJoinSound, playLeaveSound, playMuteSound } from './sounds'
+import { useVoice } from './useVoice'
+import { useRealtimeSubscriptions } from './realtime'
+import { measurePing, qualityFromPing } from './internet'
+import { VOICE_REJOIN_MS, readVoiceSession } from './settings'
+import type { AppContextValue, AuthState, Notice, SavedCredentials } from './app-types'
 import type { Channel, DmThreadWithOther, ModalType, Profile, Screen, Server, ServerEmoji, VoicePeerInfo } from './types'
 
-type AuthState = 'loading' | 'signedOut' | 'signedIn'
-
-export interface Notice {
-  kind: 'error' | 'success'
-  text: string
-}
-
-export interface SavedCredentials {
-  email: string
-  password: string
-  username: string
-}
-
-interface AppContextValue {
-  authState: AuthState
-  profile: Profile | null
-  servers: Server[]
-  dms: DmThreadWithOther[]
-  channels: Channel[]
-  onlineUsers: Set<string>
-  screen: Screen | null
-  modal: ModalType
-  notice: Notice | null
-  login: (email: string, password: string) => Promise<void>
-  register: (email: string, password: string, username: string) => Promise<void>
-  logout: () => Promise<void>
-  savedCredentials: SavedCredentials | null
-  storeCredentials: (creds: SavedCredentials) => Promise<void>
-  forgetCredentials: () => Promise<void>
-  selectServer: (serverId: string) => Promise<void>
-  selectChannel: (channelId: string) => void
-  selectDm: (threadId: string | null) => void
-  openModal: (modal: Exclude<ModalType, null>) => void
-  closeModal: () => void
-  renamingChannel: Channel | null
-  openRenameChannel: (channel: Channel) => void
-  handleRenameChannel: (channelId: string, name: string) => Promise<void>
-  handleCreateServer: (name: string) => Promise<Server | null>
-  handleJoinServer: (code: string) => Promise<Server | null>
-  handleCreateChannel: (name: string, type: 'text' | 'voice') => Promise<void>
-  handleDeleteChannel: (channelId: string) => Promise<void>
-  handleDeleteServer: () => Promise<void>
-  sendChannelMessage: (channelId: string, content: string) => Promise<void>
-  sendDmMessage: (threadId: string, content: string) => Promise<void>
-  serverEmojis: ServerEmoji[]
-  addEmoji: (name: string, file: File) => Promise<boolean>
-  removeEmoji: (emojiId: string) => Promise<void>
-  updateAvatarUrl: (url: string) => void
-  voiceChannelId: string | null
-  voiceRoster: VoicePeerInfo[]
-  // quem está em CADA canal de voz (mesmo sem estar dentro da sala)
-  voicePresence: Record<string, VoicePeerInfo[]>
-  // início da atividade de cada canal de voz (channelId -> started_at ISO)
-  voiceSessions: Record<string, string>
-  voiceMuted: boolean
-  voiceDeafened: boolean
-  speakingUsers: Set<string>
-  voiceInputLevel: number
-  microphones: MediaDeviceInfo[]
-  selectedMicId: string | null
-  peerVolumes: Record<string, number>
-  setPeerVolume: (userId: string, volume: number) => void
-  peerSignals: Record<string, number>
-  micVolume: number
-  setMicVolume: (volume: number) => void
-  internetPing: number | null
-  internetQuality: number
-  outputDevices: MediaDeviceInfo[]
-  selectedOutputId: string | null
-  outputVolume: number
-  loadOutputDevices: () => Promise<void>
-  selectOutputDevice: (deviceId: string) => Promise<void>
-  setOutputVolume: (volume: number) => void
-  noiseSuppression: boolean
-  setNoiseSuppression: (enabled: boolean) => Promise<void>
-  joinVoice: (channelId: string) => Promise<void>
-  leaveVoice: () => Promise<void>
-  toggleVoiceMute: () => void
-  toggleVoiceDeafen: () => void
-  loadMicrophones: () => Promise<void>
-  selectMicrophone: (deviceId: string) => Promise<void>
-  notify: (kind: Notice['kind'], text: string) => void
-}
-
-const MIC_STORAGE_KEY = 'selected-mic-id'
-const NOISE_SUPPRESSION_KEY = 'noise-suppression'
-const VOICE_SESSION_KEY = 'voice-session'
-const VOICE_REJOIN_MS = 20 * 60 * 1000 // 20 minutos
-
-interface VoiceSession {
-  channelId: string
-  serverId: string
-  at: number
-}
-
-function readVoiceSession(): VoiceSession | null {
-  try {
-    const raw = localStorage.getItem(VOICE_SESSION_KEY)
-    if (!raw) return null
-    const s = JSON.parse(raw) as VoiceSession
-    return s && typeof s.channelId === 'string' && typeof s.serverId === 'string' ? s : null
-  } catch {
-    return null
-  }
-}
-
-function writeVoiceSession(s: VoiceSession): void {
-  try {
-    localStorage.setItem(VOICE_SESSION_KEY, JSON.stringify(s))
-  } catch {
-    // armazenamento indisponível — segue sem voltar automaticamente
-  }
-}
-
-function clearVoiceSession(): void {
-  try {
-    localStorage.removeItem(VOICE_SESSION_KEY)
-  } catch {
-    // ignore
-  }
-}
+export type { Notice, SavedCredentials } from './app-types'
 
 const AppContext = createContext<AppContextValue | null>(null)
 
@@ -154,65 +36,16 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
   const [channels, setChannels] = useState<Channel[]>([])
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set())
   const [serverEmojis, setServerEmojis] = useState<ServerEmoji[]>([])
-  const [voiceChannelId, setVoiceChannelId] = useState<string | null>(null)
-  const [voiceRoster, setVoiceRoster] = useState<VoicePeerInfo[]>([])
-  const [voicePresence, setVoicePresence] = useState<Record<string, VoicePeerInfo[]>>({})
-  const [voiceSessions, setVoiceSessions] = useState<Record<string, string>>({})
-  const [voiceMuted, setVoiceMuted] = useState(false)
-  const [voiceDeafened, setVoiceDeafened] = useState(false)
-  const [speakingUsers, setSpeakingUsers] = useState<Set<string>>(new Set())
-  const [voiceInputLevel, setVoiceInputLevel] = useState(0)
-  const [microphones, setMicrophones] = useState<MediaDeviceInfo[]>([])
-  const [selectedMicId, setSelectedMicId] = useState<string | null>(() => localStorage.getItem(MIC_STORAGE_KEY))
-  const [noiseSuppression, setNoiseSuppressionState] = useState<boolean>(() => {
-    const v = localStorage.getItem(NOISE_SUPPRESSION_KEY)
-    return v === null ? true : v === '1'
-  })
-  const [micVolume, setMicVolumeState] = useState<number>(() => {
-    try {
-      const v = Number(localStorage.getItem('mic-volume'))
-      return Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 1
-    } catch {
-      return 1
-    }
-  })
-  // ping da conexão com o servidor do app (sinal de internet)
-  const [internetPing, setInternetPing] = useState<number | null>(null)
-  const internetQuality: number = internetPing === null ? 0 : internetPing < 80 ? 4 : internetPing < 150 ? 3 : internetPing < 300 ? 2 : 1
-  const [outputDevices, setOutputDevices] = useState<MediaDeviceInfo[]>([])
-  const [selectedOutputId, setSelectedOutputId] = useState<string | null>(() => {
-    try {
-      return localStorage.getItem('output-device-id')
-    } catch {
-      return null
-    }
-  })
-  const [outputVolume, setOutputVolumeState] = useState<number>(() => {
-    try {
-      const v = Number(localStorage.getItem('output-volume'))
-      return Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 1
-    } catch {
-      return 1
-    }
-  })
-  const [peerSignals, setPeerSignals] = useState<Record<string, number>>({})
-  const profileRef = useRef<Profile | null>(null)
-  const prevVoiceRosterRef = useRef<ReadonlySet<string>>(new Set())
-  const [peerVolumes, setPeerVolumes] = useState<Record<string, number>>(() => {
-    try {
-      const raw = localStorage.getItem('peer-volumes')
-      return raw ? (JSON.parse(raw) as Record<string, number>) : {}
-    } catch {
-      return {}
-    }
-  })
   const [screen, setScreen] = useState<Screen | null>(null)
   const [modal, setModal] = useState<ModalType>(null)
   const [renamingChannel, setRenamingChannel] = useState<Channel | null>(null)
   const [notice, setNotice] = useState<Notice | null>(null)
   const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const voiceManagerRef = useRef<VoiceManager | null>(null)
-  if (!voiceManagerRef.current) voiceManagerRef.current = new VoiceManager()
+  // presença em cada canal de voz (fora da sala) + atividade das salas
+  const [voicePresence, setVoicePresence] = useState<Record<string, VoicePeerInfo[]>>({})
+  const [voiceSessions, setVoiceSessions] = useState<Record<string, string>>({})
+  // ping da conexão com o servidor do app (sinal de internet)
+  const [internetPing, setInternetPing] = useState<number | null>(null)
 
   const notify = useCallback((kind: Notice['kind'], text: string) => {
     if (noticeTimer.current) clearTimeout(noticeTimer.current)
@@ -220,9 +53,32 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
     noticeTimer.current = setTimeout(() => setNotice(null), 5000)
   }, [])
 
-  useEffect(() => {
-    profileRef.current = profile
-  }, [profile])
+  // ------------------------------------------------------------
+  // Voz (WebRTC + dispositivos + controles) — hook próprio
+  // ------------------------------------------------------------
+  const activeServerId = screen?.type === 'server' ? screen.serverId : null
+  const voice = useVoice({ profile, activeServerId, notify })
+
+  // ------------------------------------------------------------
+  // Realtime (presença, DMs, servidores, canais, voz, perfis)
+  // ------------------------------------------------------------
+  useRealtimeSubscriptions({
+    signedIn: authState === 'signedIn',
+    profile,
+    activeServerId,
+    channels,
+    voiceManager: voice.voiceManager,
+    onMyProfileUpdate: voice.updateProfile,
+    onVoiceChannelDeleted: voice.onJoinedChannelDeleted,
+    setOnlineUsers,
+    setDms,
+    setServers,
+    setScreen,
+    setChannels,
+    setProfile,
+    setVoicePresence,
+    setVoiceSessions
+  })
 
   // ------------------------------------------------------------
   // Credenciais lembradas ("Lembrar de mim")
@@ -255,23 +111,19 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'SIGNED_IN') setAuthState('signedIn')
       if (event === 'SIGNED_OUT') {
-        void voiceManagerRef.current?.leave()
+        voice.reset()
         setAuthState('signedOut')
         setProfile(null)
         setServers([])
         setDms([])
         setChannels([])
         setOnlineUsers(new Set())
-        setVoiceChannelId(null)
-        setVoiceRoster([])
-        setSpeakingUsers(new Set())
-        setVoiceInputLevel(0)
-        setPeerSignals({})
         setScreen(null)
         setDataReady(false)
       }
     })
     return () => sub.subscription.unsubscribe()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // ------------------------------------------------------------
@@ -306,126 +158,6 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
     }
   }, [authState, notify])
 
-
-
-  // ------------------------------------------------------------
-  // Presença (quem está online)
-  // ------------------------------------------------------------
-  useEffect(() => {
-    if (authState !== 'signedIn' || !profile) return
-    const supabase = getSupabase()
-    const ch = supabase.channel('online-users', { config: { presence: { key: profile.id } } })
-    ch.on('presence', { event: 'sync' }, () => {
-      setOnlineUsers(new Set(Object.keys(ch.presenceState())))
-    })
-      .on('presence', { event: 'join' }, ({ key }) => {
-        setOnlineUsers((prev) => {
-          const next = new Set(prev)
-          next.add(key)
-          return next
-        })
-      })
-      .on('presence', { event: 'leave' }, ({ key }) => {
-        setOnlineUsers((prev) => {
-          const next = new Set(prev)
-          next.delete(key)
-          return next
-        })
-      })
-    void ch.subscribe(async (status) => {
-      if (status === 'SUBSCRIBED') await ch.track({ online: true })
-    })
-    return () => {
-      void supabase.removeChannel(ch)
-    }
-  }, [authState, profile])
-
-  // ------------------------------------------------------------
-  // Realtime: conversas diretas (novo último recado / nova conversa)
-  // ------------------------------------------------------------
-  useEffect(() => {
-    if (authState !== 'signedIn') return
-    const supabase = getSupabase()
-    const ch = supabase.channel('dms-live')
-    ch.on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'dm_threads' }, () => {
-      void api.fetchDmThreads().then(setDms).catch(() => undefined)
-    })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'dm_threads' }, () => {
-        void api.fetchDmThreads().then(setDms).catch(() => undefined)
-      })
-    void ch.subscribe()
-    return () => {
-      void supabase.removeChannel(ch)
-    }
-  }, [authState])
-
-  // ------------------------------------------------------------
-  // Realtime: servidores excluídos por outra pessoa
-  // ------------------------------------------------------------
-  useEffect(() => {
-    if (authState !== 'signedIn') return
-    const supabase = getSupabase()
-    const ch = supabase.channel('servers-live')
-    ch.on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'servers' }, () => {
-      void api.fetchMyServers().then((s) => {
-        setServers(s)
-        setScreen((prev) => {
-          if (prev?.type === 'server' && !s.some((x) => x.id === prev.serverId)) {
-            return null // efeito de navegação automática escolhe o próximo
-          }
-          return prev
-        })
-      })
-    })
-    void ch.subscribe()
-    return () => {
-      void supabase.removeChannel(ch)
-    }
-  }, [authState])
-
-  // ------------------------------------------------------------
-  // Realtime: canais do servidor ativo (criados/excluídos)
-  // ------------------------------------------------------------
-  useEffect(() => {
-    if (authState !== 'signedIn' || screen?.type !== 'server') return
-    const serverId = screen.serverId
-    const supabase = getSupabase()
-    const ch = supabase.channel(`channels-${serverId}`)
-    const refresh = async (): Promise<Channel[]> => {
-      const c = await api.fetchChannels(serverId)
-      setChannels(c)
-      return c
-    }
-    ch.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'channels', filter: `server_id=eq.${serverId}` }, () => {
-      void refresh().catch(() => undefined)
-    })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'channels', filter: `server_id=eq.${serverId}` }, () => {
-        // renomeação de canal propaga para todos os clientes ao vivo
-        void refresh().catch(() => undefined)
-      })
-      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'channels', filter: `server_id=eq.${serverId}` }, (payload) => {
-        const deletedId = (payload.old as { id?: string } | undefined)?.id
-        if (deletedId && deletedId === voiceManagerRef.current?.joinedChannelId) {
-          void voiceManagerRef.current?.leave()
-          setVoiceChannelId(null)
-          setVoiceRoster([])
-          setSpeakingUsers(new Set())
-        }
-        void refresh().then((c) => {
-          setScreen((prev) => {
-            if (prev?.type === 'server' && prev.channelId === deletedId) {
-              return { ...prev, channelId: c[0]?.id ?? '' }
-            }
-            return prev
-          })
-        })
-      })
-    void ch.subscribe()
-    return () => {
-      void supabase.removeChannel(ch)
-    }
-  }, [authState, screen?.type, screen?.type === 'server' ? screen.serverId : null]) // eslint-disable-line react-hooks/exhaustive-deps
-
   // ------------------------------------------------------------
   // Emojis personalizados do servidor ativo
   // ------------------------------------------------------------
@@ -448,122 +180,11 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
   }, [authState, screen?.type, screen?.type === 'server' ? screen.serverId : null]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ------------------------------------------------------------
-  // Presença nos canais de voz + atividade das salas
-  // Mostra quem está em cada canal de voz mesmo sem estar dentro,
-  // e o tempo de atividade ao lado do nome do canal.
-  // Usa um cliente Supabase separado (getSupabaseObserver): o Realtime
-  // reutiliza a instância de canal por tópico, então observar os tópicos
-  // voice:* com o mesmo cliente do VoiceManager faria o join() falhar
-  // ao tentar registrar callbacks de presence depois do subscribe().
-  // ------------------------------------------------------------
-  useEffect(() => {
-    if (authState !== 'signedIn' || screen?.type !== 'server') {
-      setVoicePresence({})
-      setVoiceSessions({})
-      return
-    }
-    const supabase = getSupabaseObserver()
-    const voiceChannels = channels.filter((c) => c.type === 'voice')
-    const presenceSubs: RealtimeChannel[] = []
-    let cancelled = false
-
-    // 1) presença por canal (quem está em cada sala) — assinatura leve,
-    //    sem entrar no canal de áudio (não chama track()). O observador não
-    //    persiste sessão, então copia o token atual antes de assinar.
-    void (async () => {
-      const { data } = await getSupabase().auth.getSession()
-      if (cancelled) return
-      if (data.session) supabase.realtime.setAuth(data.session.access_token)
-
-      for (const c of voiceChannels) {
-        const ch = supabase.channel(`voice:${c.id}`, {
-          config: { presence: { key: profile?.id ?? 'display' } }
-        })
-        const apply = (): void => {
-          if (cancelled) return
-          const state = ch.presenceState() as Record<string, { info?: VoicePeerInfo }[]>
-          const map = new Map<string, VoicePeerInfo>()
-          for (const arr of Object.values(state)) {
-            for (const p of arr) {
-              if (p.info && p.info.userId) map.set(p.info.userId, p.info)
-            }
-          }
-          setVoicePresence((prev) => {
-            const prevIds = new Set((prev[c.id] ?? []).map((u) => u.userId))
-            const ids = new Set(map.keys())
-            if (prevIds.size === ids.size && [...prevIds].every((id) => ids.has(id))) return prev
-            return { ...prev, [c.id]: [...map.values()] }
-          })
-        }
-        ch.on('presence', { event: 'sync' }, apply)
-          .on('presence', { event: 'join' }, apply)
-          .on('presence', { event: 'leave' }, apply)
-        void ch.subscribe()
-        presenceSubs.push(ch)
-      }
-    })()
-
-    // 2) sessões ativas (started_at de cada canal) — consulta leve a cada 30 s
-    const refreshSessions = async (): Promise<void> => {
-      const ids = voiceChannels.map((c) => c.id)
-      const sessions = await api.fetchVoiceSessions(ids)
-      if (!cancelled) setVoiceSessions(sessions)
-    }
-    void refreshSessions().catch(() => undefined)
-    const iv = setInterval(() => void refreshSessions().catch(() => undefined), 30_000)
-
-    return () => {
-      cancelled = true
-      clearInterval(iv)
-      for (const ch of presenceSubs) void supabase.removeChannel(ch)
-      setVoicePresence((prev) => {
-        const next = { ...prev }
-        for (const c of voiceChannels) delete next[c.id]
-        return next
-      })
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authState, screen?.type, screen?.type === 'server' ? screen.serverId : null, channels, profile?.id])
-
-  // ------------------------------------------------------------
-  // Realtime: perfis (nome/foto de usuário) ao vivo
-  // Qualquer alteração de username/avatar propaga para:
-  //   - meu próprio perfil (ex.: outra janela do app)
-  //   - conversas diretas (nome/foto do outro participante)
-  //   - minha presença no canal de voz (nome que os outros veem)
-  // (autores de mensagens e lista de membros têm assinaturas
-  //  próprias em ChatArea e MemberList)
-  // ------------------------------------------------------------
-  useEffect(() => {
-    if (authState !== 'signedIn') return
-    const supabase = getSupabase()
-    const ch = supabase.channel('profiles-live')
-    ch.on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles' }, (payload) => {
-      const p = payload.new as Profile
-      // meu próprio perfil (ex.: troquei o nome/avatar em outra janela)
-      setProfile((prev) => (prev && prev.id === p.id ? { ...prev, ...p } : prev))
-      // conversas diretas: atualiza o perfil do outro participante
-      setDms((prev) => prev.map((t) => (t.other.id === p.id ? { ...t, other: { ...t.other, ...p } } : t)))
-      // minha presença no canal de voz: os outros veem o novo nome/foto
-      if (profileRef.current?.id === p.id) {
-        void voiceManagerRef.current?.updateProfile({ ...profileRef.current, ...p })
-      }
-    })
-    void ch.subscribe()
-    return () => {
-      void supabase.removeChannel(ch)
-    }
-  }, [authState])
-
-  // ------------------------------------------------------------
   // Ações
   // ------------------------------------------------------------
-  const login = useCallback(
-    async (email: string, password: string) => {
-      await api.signIn(email, password)
-    },
-    []
-  )
+  const login = useCallback(async (email: string, password: string) => {
+    await api.signIn(email, password)
+  }, [])
 
   const register = useCallback(async (email: string, password: string, username: string) => {
     const p = await api.signUp(email, password, username)
@@ -589,12 +210,9 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
     setScreen({ type: 'server', serverId, channelId: c[0]?.id ?? '' })
   }, [])
 
-  const selectChannel = useCallback(
-    (channelId: string) => {
-      setScreen((prev) => (prev?.type === 'server' ? { ...prev, channelId } : prev))
-    },
-    []
-  )
+  const selectChannel = useCallback((channelId: string) => {
+    setScreen((prev) => (prev?.type === 'server' ? { ...prev, channelId } : prev))
+  }, [])
 
   const selectDm = useCallback((threadId: string | null) => {
     setScreen({ type: 'dm', threadId })
@@ -622,15 +240,7 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
           if (!ch) throw new Error('canal de voz não existe mais')
           setChannels(chs)
           setScreen({ type: 'server', serverId: server.id, channelId: ch.id })
-          await voiceManagerRef.current!.join(ch.id, profile, selectedMicId)
-          voiceManagerRef.current!.setMicVolume(micVolume)
-          if (selectedOutputId) void voiceManagerRef.current!.setOutputDevice(selectedOutputId)
-          voiceManagerRef.current!.setOutputVolume(outputVolume)
-          setVoiceChannelId(ch.id)
-          setVoiceMuted(false)
-          setVoiceDeafened(false)
-          playJoinSound()
-          notify('success', 'Você voltou ao canal de voz!')
+          await voice.rejoin(ch.id, profile)
         } catch {
           // não conseguiu voltar (canal excluído, sem permissão de microfone…) —
           // segue para o servidor normalmente
@@ -640,7 +250,7 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
     } else {
       void selectServer(servers[0].id)
     }
-  }, [authState, dataReady, screen, servers, profile, micVolume, selectedOutputId, outputVolume, selectServer, notify])
+  }, [authState, dataReady, screen, servers, profile, voice.rejoin, selectServer]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const openModal = useCallback((m: Exclude<ModalType, null>) => setModal(m), [])
   const closeModal = useCallback(() => {
@@ -807,189 +417,8 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
   }, [])
 
   // ------------------------------------------------------------
-  // Voz (WebRTC)
-  // ------------------------------------------------------------
-  useEffect(() => {
-    const m = voiceManagerRef.current
-    if (!m) return
-    m.onRoster = (users) => {
-      setVoiceRoster(users)
-      // efeitos sonoros: quem entrou/saiu da sala (exceto eu — o meu som
-      // é tocado em joinVoice/leaveVoice)
-      const meId = profileRef.current?.id
-      const ids = new Set(users.map((u) => u.userId))
-      const prev = prevVoiceRosterRef.current
-      for (const u of users) {
-        if (!prev.has(u.userId) && u.userId !== meId) playJoinSound()
-      }
-      for (const id of prev) {
-        if (!ids.has(id) && id !== meId) playLeaveSound()
-      }
-      prevVoiceRosterRef.current = ids
-    }
-    m.onSpeaking = (userId, speaking) => {
-      setSpeakingUsers((prev) => {
-        const next = new Set(prev)
-        if (speaking) next.add(userId)
-        else next.delete(userId)
-        return next
-      })
-    }
-    m.onLocalLevel = (level) => setVoiceInputLevel(level)
-    m.onPeerSignal = (userId, quality) => {
-      setPeerSignals((prev) => (prev[userId] === quality ? prev : { ...prev, [userId]: quality }))
-    }
-    m.onError = (msg) => notify('error', msg)
-    return () => {
-      void m.leave()
-      m.onRoster = null
-      m.onSpeaking = null
-      m.onLocalLevel = null
-      m.onPeerSignal = null
-      m.onError = null
-    }
-  }, [notify])
-
-  // ------------------------------------------------------------
-  // Microfones disponíveis (atualiza quando dispositivos mudam)
-  // ------------------------------------------------------------
-  const loadMicrophones = useCallback(async () => {
-    const mics = await getMicrophones()
-    setMicrophones(mics)
-    setSelectedMicId((prev) => {
-      if (prev && mics.some((m) => m.deviceId === prev)) return prev
-      return mics[0]?.deviceId ?? null
-    })
-  }, [])
-
-  useEffect(() => {
-    void loadMicrophones()
-    if (!navigator.mediaDevices?.addEventListener) return
-    const onChange = (): void => void loadMicrophones()
-    navigator.mediaDevices.addEventListener('devicechange', onChange)
-    return () => navigator.mediaDevices.removeEventListener('devicechange', onChange)
-  }, [loadMicrophones])
-
-  const selectMicrophone = useCallback(
-    async (deviceId: string) => {
-      setSelectedMicId(deviceId)
-      localStorage.setItem(MIC_STORAGE_KEY, deviceId)
-      if (voiceManagerRef.current?.joinedChannelId) {
-        try {
-          await voiceManagerRef.current.setAudioDevice(deviceId)
-          notify('success', 'Microfone alterado!')
-        } catch (e) {
-          notify('error', e instanceof Error ? e.message : 'Não foi possível trocar o microfone')
-        }
-      }
-    },
-    [notify]
-  )
-
-  const joinVoice = useCallback(
-    async (channelId: string) => {
-      if (!profile) return
-      if (voiceManagerRef.current?.joinedChannelId === channelId) return
-      const serverId = screen?.type === 'server' ? screen.serverId : null
-      try {
-        await voiceManagerRef.current!.join(channelId, profile, selectedMicId)
-        voiceManagerRef.current!.setMicVolume(micVolume)
-        if (selectedOutputId) void voiceManagerRef.current!.setOutputDevice(selectedOutputId)
-        voiceManagerRef.current!.setOutputVolume(outputVolume)
-        setVoiceChannelId(channelId)
-        setVoiceMuted(false)
-        setVoiceDeafened(false)
-        // guarda a sala para voltar automaticamente (se fechar o app)
-        if (serverId) writeVoiceSession({ channelId, serverId, at: Date.now() })
-        playJoinSound()
-        notify('success', 'Você entrou no canal de voz!')
-      } catch (e) {
-        notify('error', e instanceof Error ? e.message : 'Erro ao entrar no canal de voz')
-      }
-    },
-    [profile, selectedMicId, micVolume, selectedOutputId, outputVolume, screen, notify]
-  )
-
-  const leaveVoice = useCallback(async () => {
-    await voiceManagerRef.current?.leave()
-    setVoiceChannelId(null)
-    setVoiceRoster([])
-    setSpeakingUsers(new Set())
-    setVoiceInputLevel(0)
-    setPeerSignals({})
-    clearVoiceSession()
-    prevVoiceRosterRef.current = new Set()
-    playLeaveSound()
-  }, [])
-
-  // mantém o horário da sessão de voz fresco enquanto estiver no canal
-  // (assim "saiu há menos de 20 min" vale a partir do fechamento do app)
-  useEffect(() => {
-    if (!voiceChannelId) return
-    const iv = setInterval(() => {
-      const s = readVoiceSession()
-      if (s && s.channelId === voiceChannelId) writeVoiceSession({ ...s, at: Date.now() })
-    }, 60 * 1000)
-    return () => clearInterval(iv)
-  }, [voiceChannelId])
-
-  const toggleVoiceMute = useCallback(() => {
-    setVoiceMuted((prev) => {
-      const next = !prev
-      voiceManagerRef.current?.setLocalMuted(next)
-      return next
-    })
-    playMuteSound()
-  }, [])
-
-  const toggleVoiceDeafen = useCallback(() => {
-    setVoiceDeafened((prev) => {
-      const next = !prev
-      voiceManagerRef.current?.setDeafened(next)
-      return next
-    })
-    playDeafenSound()
-  }, [])
-
-  const setNoiseSuppression = useCallback(async (enabled: boolean) => {
-    setNoiseSuppressionState(enabled)
-    try {
-      localStorage.setItem(NOISE_SUPPRESSION_KEY, enabled ? '1' : '0')
-    } catch {
-      // armazenamento indisponível — segue só em memória
-    }
-    await voiceManagerRef.current?.setNoiseSuppression(enabled)
-  }, [])
-
-  const setMicVolume = useCallback((volume: number) => {
-    const v = Math.min(1, Math.max(0, volume))
-    setMicVolumeState(v)
-    try {
-      localStorage.setItem('mic-volume', String(v))
-    } catch {
-      // armazenamento indisponível — segue só em memória
-    }
-    voiceManagerRef.current?.setMicVolume(v)
-  }, [])
-
-  // ------------------------------------------------------------
   // Sinal de internet: mede o ping até o servidor do app a cada 5s
   // ------------------------------------------------------------
-  const measurePing = useCallback(async (): Promise<number | null> => {
-    if (!supabaseUrl) return null
-    const start = performance.now()
-    try {
-      const ctrl = new AbortController()
-      const timer = setTimeout(() => ctrl.abort(), 4000)
-      // GET leve; qualquer resposta (mesmo 4xx) mede o round-trip até o servidor
-      await fetch(`${supabaseUrl}/rest/v1/?cv=${Date.now()}`, { cache: 'no-store', signal: ctrl.signal })
-      clearTimeout(timer)
-      return Math.round(performance.now() - start)
-    } catch {
-      return null
-    }
-  }, [])
-
   useEffect(() => {
     let cancelled = false
     const tick = async (): Promise<void> => {
@@ -1007,57 +436,13 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
       cancelled = true
       clearInterval(iv)
     }
-  }, [measurePing])
-
-  const loadOutputDevices = useCallback(async () => {
-    const devices = await getOutputDevices()
-    setOutputDevices(devices)
   }, [])
 
-  useEffect(() => {
-    void loadOutputDevices()
-    if (!navigator.mediaDevices?.addEventListener) return
-    const onChange = (): void => void loadOutputDevices()
-    navigator.mediaDevices.addEventListener('devicechange', onChange)
-    return () => navigator.mediaDevices.removeEventListener('devicechange', onChange)
-  }, [loadOutputDevices])
-
-  const selectOutputDevice = useCallback(async (deviceId: string) => {
-    setSelectedOutputId(deviceId)
-    try {
-      localStorage.setItem('output-device-id', deviceId)
-    } catch {
-      // armazenamento indisponível — segue só em memória
-    }
-    await voiceManagerRef.current?.setOutputDevice(deviceId)
-  }, [])
-
-  const setOutputVolume = useCallback((volume: number) => {
-    const v = Math.min(1, Math.max(0, volume))
-    setOutputVolumeState(v)
-    try {
-      localStorage.setItem('output-volume', String(v))
-    } catch {
-      // armazenamento indisponível — segue só em memória
-    }
-    voiceManagerRef.current?.setOutputVolume(v)
-  }, [])
-
-  const setPeerVolume = useCallback((userId: string, volume: number) => {
-    setPeerVolumes((prev) => {
-      const next = { ...prev, [userId]: volume }
-      try {
-        localStorage.setItem('peer-volumes', JSON.stringify(next))
-      } catch {
-        // armazenamento indisponível — segue só em memória
-      }
-      return next
-    })
-    voiceManagerRef.current?.setPeerVolume(userId, volume)
-  }, [])
+  const internetQuality = qualityFromPing(internetPing)
 
   const value = useMemo<AppContextValue>(
     () => ({
+      ...voice,
       authState,
       profile,
       servers,
@@ -1092,40 +477,14 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
       addEmoji,
       removeEmoji,
       updateAvatarUrl,
-      voiceChannelId,
-      voiceRoster,
       voicePresence,
       voiceSessions,
-      voiceMuted,
-      voiceDeafened,
-      speakingUsers,
-      voiceInputLevel,
-      microphones,
-      selectedMicId,
-      peerVolumes,
-      setPeerVolume,
-      peerSignals,
-      micVolume,
-      setMicVolume,
       internetPing,
       internetQuality,
-      outputDevices,
-      selectedOutputId,
-      outputVolume,
-      loadOutputDevices,
-      selectOutputDevice,
-      setOutputVolume,
-      noiseSuppression,
-      setNoiseSuppression,
-      joinVoice,
-      leaveVoice,
-      toggleVoiceMute,
-      toggleVoiceDeafen,
-      loadMicrophones,
-      selectMicrophone,
       notify
     }),
     [
+      voice,
       authState,
       profile,
       servers,
@@ -1160,37 +519,10 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
       addEmoji,
       removeEmoji,
       updateAvatarUrl,
-      voiceChannelId,
-      voiceRoster,
       voicePresence,
       voiceSessions,
-      voiceMuted,
-      voiceDeafened,
-      speakingUsers,
-      voiceInputLevel,
-      microphones,
-      selectedMicId,
-      peerVolumes,
-      setPeerVolume,
-      peerSignals,
-      micVolume,
-      setMicVolume,
       internetPing,
       internetQuality,
-      outputDevices,
-      selectedOutputId,
-      outputVolume,
-      loadOutputDevices,
-      selectOutputDevice,
-      setOutputVolume,
-      noiseSuppression,
-      setNoiseSuppression,
-      joinVoice,
-      leaveVoice,
-      toggleVoiceMute,
-      toggleVoiceDeafen,
-      loadMicrophones,
-      selectMicrophone,
       notify
     ]
   )
