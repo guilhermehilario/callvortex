@@ -9,12 +9,13 @@ import SignalBars from './SignalBars'
 function formatActivity(startedAtIso: string, nowMs: number): string | null {
   const ms = nowMs - new Date(startedAtIso).getTime()
   if (!Number.isFinite(ms) || ms < 0) return null
-  const min = Math.floor(ms / 60000)
-  if (min < 1) return 'agora'
-  if (min < 60) return `${min} min`
-  const h = Math.floor(min / 60)
-  const m = min % 60
-  return m === 0 ? `${h} h` : `${h} h ${m} min`
+  const total = Math.floor(ms / 1000)
+  const h = Math.floor(total / 3600)
+  const m = Math.floor((total % 3600) / 60)
+  const s = total % 60
+  if (h > 0) return `${h} h ${m} min ${s} s`
+  if (m > 0) return `${m} min ${s} s`
+  return `${s} s`
 }
 
 export default function VoiceChannelScreen({ channel }: { channel: Channel }): React.JSX.Element {
@@ -42,7 +43,7 @@ export default function VoiceChannelScreen({ channel }: { channel: Channel }): R
   const startedAt = voiceSessions[channel.id]
   const [now, setNow] = useState(Date.now())
   useEffect(() => {
-    const iv = setInterval(() => setNow(Date.now()), 30_000)
+    const iv = setInterval(() => setNow(Date.now()), 1_000)
     return () => clearInterval(iv)
   }, [])
   const activity = startedAt && members.length > 0 ? formatActivity(startedAt, now) : null
@@ -57,7 +58,7 @@ export default function VoiceChannelScreen({ channel }: { channel: Channel }): R
             {activity && (
               <>
                 {' · '}
-                <span title={startedAt ? `Sala ativa desde ${new Date(startedAt).toLocaleString('pt-BR')}` : 'Sala ativa'}>ativo há {activity}</span>
+                <span className="voice-screen-activity" title={startedAt ? `Sala ativa desde ${new Date(startedAt).toLocaleString('pt-BR')}` : 'Sala ativa'}>ativo há {activity}</span>
               </>
             )}
           </span>

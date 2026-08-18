@@ -8,16 +8,17 @@ import MicPicker from './MicPicker'
 import OutputPicker from './OutputPicker'
 import SignalBars from './SignalBars'
 
-/** "5 min", "1 h 12 min", "agora" — duração desde o início da atividade. */
+/** "30 s", "5 min 30 s", "1 h 12 min 30 s" — duração desde o início da atividade. */
 function formatActivity(startedAtIso: string, nowMs: number): string | null {
   const ms = nowMs - new Date(startedAtIso).getTime()
   if (!Number.isFinite(ms) || ms < 0) return null
-  const min = Math.floor(ms / 60000)
-  if (min < 1) return 'agora'
-  if (min < 60) return `${min} min`
-  const h = Math.floor(min / 60)
-  const m = min % 60
-  return m === 0 ? `${h} h` : `${h} h ${m} min`
+  const total = Math.floor(ms / 1000)
+  const h = Math.floor(total / 3600)
+  const m = Math.floor((total % 3600) / 60)
+  const s = total % 60
+  if (h > 0) return `${h} h ${m} min ${s} s`
+  if (m > 0) return `${m} min ${s} s`
+  return `${s} s`
 }
 
 export default function ChannelSidebar(): React.JSX.Element {
@@ -43,10 +44,10 @@ export default function ChannelSidebar(): React.JSX.Element {
   } = useApp()
 
   const [menuOpen, setMenuOpen] = useState(false)
-  // re-renderiza a cada 30 s para atualizar o relógio das salas ativas
+  // re-renderiza a cada segundo para atualizar o relógio das salas ativas
   const [, setNow] = useState(Date.now())
   useEffect(() => {
-    const iv = setInterval(() => setNow(Date.now()), 30_000)
+    const iv = setInterval(() => setNow(Date.now()), 1_000)
     return () => clearInterval(iv)
   }, [])
 

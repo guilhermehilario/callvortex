@@ -526,10 +526,18 @@ button {
 }
 .voice-activity {
   font-size: 11px;
-  color: var(--text-muted);
-  margin-left: 4px;
+  color: var(--green);
+  margin-left: auto; /* empurra o relógio para a direita da linha do canal */
   white-space: nowrap;
   flex-shrink: 0;
+}
+/* quando o relógio está visível, as ações (renomear/excluir) perdem o auto
+   margin para não dividir o espaço com ele — o relógio fica à direita */
+.voice-channel-block:has(.voice-activity) .channel-actions {
+  margin-left: 4px;
+}
+.voice-screen-activity {
+  color: var(--green);
 }
 @keyframes pulse {
   0%,
