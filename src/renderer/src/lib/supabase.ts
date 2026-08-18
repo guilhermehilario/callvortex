@@ -38,8 +38,12 @@ export function getSupabaseObserver(): SupabaseClient {
         'Configuração do Supabase incompleta. Adicione VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no arquivo .env do projeto.'
       )
     }
+    // O observador NÃO persiste sessão e usa storage próprio: dois GoTrueClient
+    // com o mesmo storage key disparam o aviso "Multiple GoTrueClient instances"
+    // e podem brigar pelo refresh token. Presença de voz não exige auth — o
+    // token é copiado sob demanda no useApp (realtime.setAuth).
     observerClient = createClient(url, anonKey, {
-      auth: { persistSession: true, autoRefreshToken: true }
+      auth: { persistSession: false, autoRefreshToken: false, storageKey: 'sb-callvortex-observer' }
     })
   }
   return observerClient

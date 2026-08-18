@@ -468,33 +468,40 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
     let cancelled = false
 
     // 1) presença por canal (quem está em cada sala) — assinatura leve,
-    //    sem entrar no canal de áudio (não chama track())
-    for (const c of voiceChannels) {
-      const ch = supabase.channel(`voice:${c.id}`, {
-        config: { presence: { key: profile?.id ?? 'display' } }
-      })
-      const apply = (): void => {
-        if (cancelled) return
-        const state = ch.presenceState() as Record<string, { info?: VoicePeerInfo }[]>
-        const map = new Map<string, VoicePeerInfo>()
-        for (const arr of Object.values(state)) {
-          for (const p of arr) {
-            if (p.info && p.info.userId) map.set(p.info.userId, p.info)
-          }
-        }
-        setVoicePresence((prev) => {
-          const prevIds = new Set((prev[c.id] ?? []).map((u) => u.userId))
-          const ids = new Set(map.keys())
-          if (prevIds.size === ids.size && [...prevIds].every((id) => ids.has(id))) return prev
-          return { ...prev, [c.id]: [...map.values()] }
+    //    sem entrar no canal de áudio (não chama track()). O observador não
+    //    persiste sessão, então copia o token atual antes de assinar.
+    void (async () => {
+      const { data } = await getSupabase().auth.getSession()
+      if (cancelled) return
+      if (data.session) supabase.realtime.setAuth(data.session.access_token)
+
+      for (const c of voiceChannels) {
+        const ch = supabase.channel(`voice:${c.id}`, {
+          config: { presence: { key: profile?.id ?? 'display' } }
         })
+        const apply = (): void => {
+          if (cancelled) return
+          const state = ch.presenceState() as Record<string, { info?: VoicePeerInfo }[]>
+          const map = new Map<string, VoicePeerInfo>()
+          for (const arr of Object.values(state)) {
+            for (const p of arr) {
+              if (p.info && p.info.userId) map.set(p.info.userId, p.info)
+            }
+          }
+          setVoicePresence((prev) => {
+            const prevIds = new Set((prev[c.id] ?? []).map((u) => u.userId))
+            const ids = new Set(map.keys())
+            if (prevIds.size === ids.size && [...prevIds].every((id) => ids.has(id))) return prev
+            return { ...prev, [c.id]: [...map.values()] }
+          })
+        }
+        ch.on('presence', { event: 'sync' }, apply)
+          .on('presence', { event: 'join' }, apply)
+          .on('presence', { event: 'leave' }, apply)
+        void ch.subscribe()
+        presenceSubs.push(ch)
       }
-      ch.on('presence', { event: 'sync' }, apply)
-        .on('presence', { event: 'join' }, apply)
-        .on('presence', { event: 'leave' }, apply)
-      void ch.subscribe()
-      presenceSubs.push(ch)
-    }
+    })()
 
     // 2) sessões ativas (started_at de cada canal) — consulta leve a cada 30 s
     const refreshSessions = async (): Promise<void> => {
