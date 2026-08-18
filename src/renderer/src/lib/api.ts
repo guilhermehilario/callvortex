@@ -2,8 +2,18 @@ import { getSupabase } from './supabase'
 import { colorFromString, genInviteCode } from './types'
 import type { Channel, DmMessage, DmThreadWithOther, Message, Profile, Server, ServerEmoji } from './types'
 
+/**
+ * Converte um erro em mensagem amigável (SEC-016).
+ * Mensagens internas do Supabase/Postgres (RLS, constraints, PGRST…) são
+ * logadas no console para diagnóstico, mas NÃO expostas ao usuário — evita
+ * vazar detalhes do schema/banco na UI.
+ */
 function err(message: string, error: unknown): Error {
   const detail = error && typeof error === 'object' && 'message' in error ? String((error as { message: string }).message) : String(error)
+  if (/row-level security|permission denied|violates (unique|foreign key|check|not-null)|duplicate key|pgrst|new row violates/i.test(detail)) {
+    console.error('[api]', message, '->', detail)
+    return new Error(`${message}.`)
+  }
   return new Error(`${message}${detail ? `: ${detail}` : ''}`)
 }
 

@@ -350,6 +350,7 @@ export default function ChatArea(): React.JSX.Element {
             placeholder={placeholder}
             rows={1}
             disabled={!chatEnabled}
+            maxLength={4000}
             onChange={(e) => {
               setInput(e.target.value)
               e.target.style.height = 'auto'

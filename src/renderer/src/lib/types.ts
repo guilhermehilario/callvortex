@@ -97,6 +97,16 @@ export function colorFromString(s: string): string {
   return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length]
 }
 
+const INVITE_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+
+/**
+ * Código de convite de 8 caracteres gerado com CSPRNG (crypto.getRandomValues),
+ * em vez de Math.random() — mais entropia e sem padrão previsível (SEC-006).
+ */
 export function genInviteCode(): string {
-  return Math.random().toString(36).slice(2, 8).toUpperCase()
+  const bytes = new Uint32Array(8)
+  crypto.getRandomValues(bytes)
+  let code = ''
+  for (const n of bytes) code += INVITE_ALPHABET[n % INVITE_ALPHABET.length]
+  return code
 }

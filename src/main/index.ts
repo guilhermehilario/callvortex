@@ -40,10 +40,30 @@ async function loadCredentials(): Promise<SavedCredentials | null> {
   }
 }
 
+// Só aceita chamadas IPC vindas do frame principal da nossa janela — assim,
+// nenhuma página externa (ou iframe) consegue ler/gravar credenciais.
+function isTrustedSender(event: Electron.IpcMainInvokeEvent): boolean {
+  const frame = event.senderFrame
+  if (!frame) return false
+  if (!app.isPackaged && process.env['ELECTRON_RENDERER_URL']) {
+    // dev: apenas a origem do dev server (ex.: http://localhost:5173)
+    return frame.url.startsWith(process.env['ELECTRON_RENDERER_URL'])
+  }
+  // produção: apenas o bundle local (file://) — o frame principal do app
+  return frame.url.startsWith('file://')
+}
+
 function registerCredentialsIpc(): void {
-  ipcMain.handle('credentials:save', (_e, creds: SavedCredentials) => saveCredentials(creds))
-  ipcMain.handle('credentials:load', () => loadCredentials())
-  ipcMain.handle('credentials:clear', async () => {
+  ipcMain.handle('credentials:save', (e, creds: SavedCredentials) => {
+    if (!isTrustedSender(e)) return false
+    return saveCredentials(creds)
+  })
+  ipcMain.handle('credentials:load', (e) => {
+    if (!isTrustedSender(e)) return null
+    return loadCredentials()
+  })
+  ipcMain.handle('credentials:clear', async (e) => {
+    if (!isTrustedSender(e)) return false
     try {
       await rm(credentialsFile(), { force: true })
       return true
@@ -66,7 +86,9 @@ function createWindow(): void {
     icon: join(__dirname, '../../build/icon.png'),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false,
+      // sandbox ativado: o renderer fica isolado do Node — se qualquer página
+      // externa carregar ou houver XSS, o preload roda sem privilégios
+      sandbox: true,
       contextIsolation: true,
       nodeIntegration: false
     }
@@ -94,9 +116,25 @@ function createWindow(): void {
     }
   })
 
-  // Abrir links externos no navegador padrão
+  // Bloquear navegação da janela para qualquer site externo
+  // (protege o preload e o window.api de páginas não confiáveis)
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    const allowed = !app.isPackaged && process.env['ELECTRON_RENDERER_URL']
+      ? url.startsWith(process.env['ELECTRON_RENDERER_URL'])
+      : url.startsWith('file://')
+    if (!allowed) event.preventDefault()
+  })
+
+  // Abrir links externos no navegador padrão — apenas http/https
   mainWindow.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url)
+    try {
+      const u = new URL(details.url)
+      if (u.protocol === 'https:' || u.protocol === 'http:') {
+        shell.openExternal(details.url)
+      }
+    } catch {
+      // URL inválida — ignora
+    }
     return { action: 'deny' }
   })
 
