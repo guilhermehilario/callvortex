@@ -7,7 +7,8 @@ import React, {
   useRef,
   useState
 } from 'react'
-import { getSupabase, supabaseUrl } from './supabase'
+import type { RealtimeChannel } from '@supabase/supabase-js'
+import { getSupabase, getSupabaseObserver, supabaseUrl } from './supabase'
 import * as api from './api'
 import { VoiceManager, getMicrophones, getOutputDevices } from './voice'
 import { playDeafenSound, playJoinSound, playLeaveSound, playMuteSound } from './sounds'
@@ -63,6 +64,10 @@ interface AppContextValue {
   updateAvatarUrl: (url: string) => void
   voiceChannelId: string | null
   voiceRoster: VoicePeerInfo[]
+  // quem está em CADA canal de voz (mesmo sem estar dentro da sala)
+  voicePresence: Record<string, VoicePeerInfo[]>
+  // início da atividade de cada canal de voz (channelId -> started_at ISO)
+  voiceSessions: Record<string, string>
   voiceMuted: boolean
   voiceDeafened: boolean
   speakingUsers: Set<string>
@@ -151,6 +156,8 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
   const [serverEmojis, setServerEmojis] = useState<ServerEmoji[]>([])
   const [voiceChannelId, setVoiceChannelId] = useState<string | null>(null)
   const [voiceRoster, setVoiceRoster] = useState<VoicePeerInfo[]>([])
+  const [voicePresence, setVoicePresence] = useState<Record<string, VoicePeerInfo[]>>({})
+  const [voiceSessions, setVoiceSessions] = useState<Record<string, string>>({})
   const [voiceMuted, setVoiceMuted] = useState(false)
   const [voiceDeafened, setVoiceDeafened] = useState(false)
   const [speakingUsers, setSpeakingUsers] = useState<Set<string>>(new Set())
@@ -439,6 +446,77 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
       cancelled = true
     }
   }, [authState, screen?.type, screen?.type === 'server' ? screen.serverId : null]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ------------------------------------------------------------
+  // Presença nos canais de voz + atividade das salas
+  // Mostra quem está em cada canal de voz mesmo sem estar dentro,
+  // e o tempo de atividade ao lado do nome do canal.
+  // Usa um cliente Supabase separado (getSupabaseObserver): o Realtime
+  // reutiliza a instância de canal por tópico, então observar os tópicos
+  // voice:* com o mesmo cliente do VoiceManager faria o join() falhar
+  // ao tentar registrar callbacks de presence depois do subscribe().
+  // ------------------------------------------------------------
+  useEffect(() => {
+    if (authState !== 'signedIn' || screen?.type !== 'server') {
+      setVoicePresence({})
+      setVoiceSessions({})
+      return
+    }
+    const supabase = getSupabaseObserver()
+    const voiceChannels = channels.filter((c) => c.type === 'voice')
+    const presenceSubs: RealtimeChannel[] = []
+    let cancelled = false
+
+    // 1) presença por canal (quem está em cada sala) — assinatura leve,
+    //    sem entrar no canal de áudio (não chama track())
+    for (const c of voiceChannels) {
+      const ch = supabase.channel(`voice:${c.id}`, {
+        config: { presence: { key: profile?.id ?? 'display' } }
+      })
+      const apply = (): void => {
+        if (cancelled) return
+        const state = ch.presenceState() as Record<string, { info?: VoicePeerInfo }[]>
+        const map = new Map<string, VoicePeerInfo>()
+        for (const arr of Object.values(state)) {
+          for (const p of arr) {
+            if (p.info && p.info.userId) map.set(p.info.userId, p.info)
+          }
+        }
+        setVoicePresence((prev) => {
+          const prevIds = new Set((prev[c.id] ?? []).map((u) => u.userId))
+          const ids = new Set(map.keys())
+          if (prevIds.size === ids.size && [...prevIds].every((id) => ids.has(id))) return prev
+          return { ...prev, [c.id]: [...map.values()] }
+        })
+      }
+      ch.on('presence', { event: 'sync' }, apply)
+        .on('presence', { event: 'join' }, apply)
+        .on('presence', { event: 'leave' }, apply)
+      void ch.subscribe()
+      presenceSubs.push(ch)
+    }
+
+    // 2) sessões ativas (started_at de cada canal) — consulta leve a cada 30 s
+    const refreshSessions = async (): Promise<void> => {
+      const ids = voiceChannels.map((c) => c.id)
+      const sessions = await api.fetchVoiceSessions(ids)
+      if (!cancelled) setVoiceSessions(sessions)
+    }
+    void refreshSessions().catch(() => undefined)
+    const iv = setInterval(() => void refreshSessions().catch(() => undefined), 30_000)
+
+    return () => {
+      cancelled = true
+      clearInterval(iv)
+      for (const ch of presenceSubs) void supabase.removeChannel(ch)
+      setVoicePresence((prev) => {
+        const next = { ...prev }
+        for (const c of voiceChannels) delete next[c.id]
+        return next
+      })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authState, screen?.type, screen?.type === 'server' ? screen.serverId : null, channels, profile?.id])
 
   // ------------------------------------------------------------
   // Realtime: perfis (nome/foto de usuário) ao vivo
@@ -1009,6 +1087,8 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
       updateAvatarUrl,
       voiceChannelId,
       voiceRoster,
+      voicePresence,
+      voiceSessions,
       voiceMuted,
       voiceDeafened,
       speakingUsers,
@@ -1075,6 +1155,8 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
       updateAvatarUrl,
       voiceChannelId,
       voiceRoster,
+      voicePresence,
+      voiceSessions,
       voiceMuted,
       voiceDeafened,
       speakingUsers,

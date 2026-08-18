@@ -215,6 +215,8 @@ export class VoiceManager {
   // qualidade do sinal (0-4) por participante, medida via getStats
   private peerSignals = new Map<string, number>()
   private statsInterval: number | null = null
+  // heartbeat da sessão de voz no banco (atividade da sala)
+  private sessionKeepAlive: number | null = null
   // supressão de ruído / melhoria de qualidade (AudioWorklet)
   private noiseSuppression = true
   private audioCtx: AudioContext | null = null
@@ -319,8 +321,16 @@ export class VoiceManager {
     void ch.subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
         await ch.track({ info: { userId: me.id, username: me.username, avatar_color: me.avatar_color, avatar_url: me.avatar_url ?? null } })
+        // registra a atividade da sala no banco (início do relógio da sala)
+        void getSupabase().rpc('ensure_voice_session', { target_channel: channelId }).then(() => undefined, () => undefined)
       }
     })
+
+    // mantém o heartbeat da sessão enquanto estiver no canal
+    // (se o app fechar sem avisar, a sessão é reiniciada pelo banco)
+    this.sessionKeepAlive = window.setInterval(() => {
+      void getSupabase().rpc('ensure_voice_session', { target_channel: channelId }).then(() => undefined, () => undefined)
+    }, 60 * 1000)
 
     // indicador de fala do próprio microfone
     this.attachSpeakingDetector('me', stream, (s) => this.setSpeaking(me.id, s))
@@ -331,8 +341,25 @@ export class VoiceManager {
 
   async leave(): Promise<void> {
     const channel = this.channel
+    const leavingChannelId = this.channelId
     this.channel = null
     this.channelId = null
+
+    // se eu era a última pessoa na sala, encerra a sessão de atividade
+    let lastOne = true
+    const me = this.me
+    if (channel && me) {
+      const state = channel.presenceState() as Record<string, unknown>
+      lastOne = Object.keys(state).filter((k) => k !== me.id).length === 0
+    }
+    if (leavingChannelId && lastOne) {
+      void getSupabase().rpc('end_voice_session', { target_channel: leavingChannelId }).then(() => undefined, () => undefined)
+    }
+
+    if (this.sessionKeepAlive !== null) {
+      clearInterval(this.sessionKeepAlive)
+      this.sessionKeepAlive = null
+    }
     if (channel) {
       void getSupabase().removeChannel(channel)
     }

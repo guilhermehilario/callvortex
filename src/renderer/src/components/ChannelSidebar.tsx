@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { uploadAvatar } from '../lib/api'
 import type { Channel } from '../lib/types'
 import { useApp } from '../lib/useApp'
@@ -7,6 +7,18 @@ import { ActivitiesIcon, BroadcastIcon, ChevronDownIcon, GearIcon, HeadphonesIco
 import MicPicker from './MicPicker'
 import OutputPicker from './OutputPicker'
 import SignalBars from './SignalBars'
+
+/** "5 min", "1 h 12 min", "agora" — duração desde o início da atividade. */
+function formatActivity(startedAtIso: string, nowMs: number): string | null {
+  const ms = nowMs - new Date(startedAtIso).getTime()
+  if (!Number.isFinite(ms) || ms < 0) return null
+  const min = Math.floor(ms / 60000)
+  if (min < 1) return 'agora'
+  if (min < 60) return `${min} min`
+  const h = Math.floor(min / 60)
+  const m = min % 60
+  return m === 0 ? `${h} h` : `${h} h ${m} min`
+}
 
 export default function ChannelSidebar(): React.JSX.Element {
   const {
@@ -18,6 +30,8 @@ export default function ChannelSidebar(): React.JSX.Element {
     onlineUsers,
     voiceChannelId,
     voiceRoster,
+    voicePresence,
+    voiceSessions,
     speakingUsers,
     peerSignals,
     selectChannel,
@@ -29,6 +43,12 @@ export default function ChannelSidebar(): React.JSX.Element {
   } = useApp()
 
   const [menuOpen, setMenuOpen] = useState(false)
+  // re-renderiza a cada 30 s para atualizar o relógio das salas ativas
+  const [, setNow] = useState(Date.now())
+  useEffect(() => {
+    const iv = setInterval(() => setNow(Date.now()), 30_000)
+    return () => clearInterval(iv)
+  }, [])
 
   const handleVoiceClick = (c: Channel): void => {
     // Clicar no canal de voz apenas abre a tela dele. Entrar/sair é sempre
@@ -151,6 +171,11 @@ export default function ChannelSidebar(): React.JSX.Element {
     {voiceChannels.map((c) => {
       const active = screen.channelId === c.id
       const joined = voiceChannelId === c.id
+      // dentro da sala: roster do VoiceManager; fora: presença observada
+      const presence = joined ? voiceRoster : (voicePresence[c.id] ?? [])
+      const startedAt = voiceSessions[c.id]
+      const activity =
+        startedAt && presence.length > 0 ? formatActivity(startedAt, Date.now()) : null
       return (
         <div key={c.id} className="voice-channel-block">
           <div
@@ -160,6 +185,9 @@ export default function ChannelSidebar(): React.JSX.Element {
           >
             <span className="voice-icon">🔊</span>
             <span className="channel-name">{c.name}</span>
+            {activity && (
+              <span className="voice-activity" title={startedAt ? `Sala ativa desde ${new Date(startedAt).toLocaleString('pt-BR')}` : 'Sala ativa'}>· {activity}</span>
+            )}
             {joined && <span className="voice-live" title="Você está neste canal">●</span>}
             {isOwner && (
               <span className="channel-actions">
@@ -181,13 +209,13 @@ export default function ChannelSidebar(): React.JSX.Element {
               </span>
             )}
           </div>
-          {joined && voiceRoster.length > 0 && (
+          {presence.length > 0 && (
             <div className="voice-channel-members">
-              {voiceRoster.map((u) => (
-                <div key={u.userId} className={`voice-channel-member ${speakingUsers.has(u.userId) ? 'speaking' : ''}`} title={u.username}>
+              {presence.slice(0, 5).map((u) => (
+                <div key={u.userId} className={`voice-channel-member ${joined && speakingUsers.has(u.userId) ? 'speaking' : ''}`} title={u.username}>
                   <span className="voice-channel-member-avatar">
                     <Avatar name={u.username} color={u.avatar_color} size={24} url={u.avatar_url} />
-                    {u.userId !== profile?.id && (
+                    {joined && u.userId !== profile?.id && (
                       <span className="voice-channel-member-signal">
                         <SignalBars quality={peerSignals[u.userId] ?? 0} small />
                       </span>
@@ -196,6 +224,9 @@ export default function ChannelSidebar(): React.JSX.Element {
                   <span className="voice-channel-member-name">{u.username}</span>
                 </div>
               ))}
+              {presence.length > 5 && (
+                <div className="voice-channel-more" title={`${presence.length} pessoas neste canal`}>+{presence.length - 5}</div>
+              )}
             </div>
           )}
         </div>

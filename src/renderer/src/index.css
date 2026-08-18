@@ -524,6 +524,13 @@ button {
   color: var(--green);
   animation: pulse 1.6s ease-in-out infinite;
 }
+.voice-activity {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-left: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
 @keyframes pulse {
   0%,
   100% {
@@ -1363,6 +1370,11 @@ button {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.voice-channel-more {
+  padding: 2px 8px;
+  font-size: 12px;
+  color: var(--text-muted);
 }
 .member-list-scroll {
   flex: 1;

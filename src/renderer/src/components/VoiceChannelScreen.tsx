@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import type { Channel } from '../lib/types'
 import { useApp } from '../lib/useApp'
 import Avatar from './Avatar'
@@ -5,11 +6,24 @@ import { HeadphonesIcon, HeadphonesOffIcon, MicIcon, MicOffIcon, PhoneOffIcon, V
 import MicPicker from './MicPicker'
 import SignalBars from './SignalBars'
 
+function formatActivity(startedAtIso: string, nowMs: number): string | null {
+  const ms = nowMs - new Date(startedAtIso).getTime()
+  if (!Number.isFinite(ms) || ms < 0) return null
+  const min = Math.floor(ms / 60000)
+  if (min < 1) return 'agora'
+  if (min < 60) return `${min} min`
+  const h = Math.floor(min / 60)
+  const m = min % 60
+  return m === 0 ? `${h} h` : `${h} h ${m} min`
+}
+
 export default function VoiceChannelScreen({ channel }: { channel: Channel }): React.JSX.Element {
   const {
     profile,
     voiceChannelId,
     voiceRoster,
+    voicePresence,
+    voiceSessions,
     voiceMuted,
     voiceDeafened,
     speakingUsers,
@@ -23,14 +37,30 @@ export default function VoiceChannelScreen({ channel }: { channel: Channel }): R
   } = useApp()
 
   const joined = voiceChannelId === channel.id
-  const members = joined ? voiceRoster : []
+  // dentro da sala: roster do VoiceManager; fora: presença observada
+  const members = joined ? voiceRoster : (voicePresence[channel.id] ?? [])
+  const startedAt = voiceSessions[channel.id]
+  const [now, setNow] = useState(Date.now())
+  useEffect(() => {
+    const iv = setInterval(() => setNow(Date.now()), 30_000)
+    return () => clearInterval(iv)
+  }, [])
+  const activity = startedAt && members.length > 0 ? formatActivity(startedAt, now) : null
 
   return (
     <section className="chat voice-screen">
       <header className="chat-header">
         <div className="chat-title">
           🔊 {channel.name}
-          <span className="chat-subtitle">Canal de voz</span>
+          <span className="chat-subtitle">
+            Canal de voz
+            {activity && (
+              <>
+                {' · '}
+                <span title={startedAt ? `Sala ativa desde ${new Date(startedAt).toLocaleString('pt-BR')}` : 'Sala ativa'}>ativo há {activity}</span>
+              </>
+            )}
+          </span>
         </div>
       </header>
 
@@ -52,7 +82,7 @@ export default function VoiceChannelScreen({ channel }: { channel: Channel }): R
               const vol = Math.round((peerVolumes[m.userId] ?? 1) * 100)
               return (
                 <div key={m.userId} className="voice-member">
-                  <span className={`voice-member-avatar ${speakingUsers.has(m.userId) ? 'speaking' : ''}`}>
+                  <span className={`voice-member-avatar ${joined && speakingUsers.has(m.userId) ? 'speaking' : ''}`}>
                     <Avatar name={m.username} color={m.avatar_color} size={40} url={m.avatar_url} />
                   </span>
                   <div className="voice-member-info">
@@ -61,9 +91,9 @@ export default function VoiceChannelScreen({ channel }: { channel: Channel }): R
                         {m.username}
                         {isMe && <span className="voice-member-you">(você)</span>}
                       </span>
-                      {!isMe && <SignalBars quality={peerSignals[m.userId] ?? 0} />}
+                      {joined && !isMe && <SignalBars quality={peerSignals[m.userId] ?? 0} />}
                     </span>
-                    {!isMe && (
+                    {joined && !isMe && (
                       <div className="voice-member-volume">
                         <span className="voice-member-vol-icon">{vol === 0 ? <VolumeMuteIcon size={14} /> : <VolumeHighIcon size={14} />}</span>
                         <input

@@ -6,3 +6,10 @@ release
 .env
 .env.local
 .DS_Store
+docs
+security-audit
+
+# dumps de backup (nunca commitar — contêm dados pessoais)
+backup-*
+*.sql.gz
+profiles_rows.sql

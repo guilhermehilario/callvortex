@@ -401,6 +401,25 @@ export async function addServerEmoji(serverId: string, name: string, file: File)
   }
 }
 
+// ------------------------------------------------------------
+// ATIVIDADE DE VOZ (sessões ativas por canal)
+// ------------------------------------------------------------
+
+export async function fetchVoiceSessions(channelIds: string[]): Promise<Record<string, string>> {
+  const supabase = getSupabase()
+  if (channelIds.length === 0) return {}
+  const { data, error } = await supabase
+    .from('voice_sessions')
+    .select('channel_id, started_at')
+    .in('channel_id', channelIds)
+  if (error) throw err('Erro ao carregar atividade de voz', error)
+  const sessions: Record<string, string> = {}
+  for (const row of (data ?? []) as { channel_id: string; started_at: string }[]) {
+    sessions[row.channel_id] = row.started_at
+  }
+  return sessions
+}
+
 export async function removeServerEmoji(emojiId: string): Promise<void> {
   const supabase = getSupabase()
   const { data } = await supabase.from('server_emojis').select('url').eq('id', emojiId).maybeSingle()
