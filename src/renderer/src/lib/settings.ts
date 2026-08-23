@@ -87,10 +87,12 @@ export function writeJson(key: string, value: unknown): void {
   }
 }
 
-/** Lê um número persistido, limitado a [min, max]; devolve fallback se inválido. */
+/** Lê um número persistido, limitado a [min, max]; devolve fallback se ausente ou inválido. */
 export function readClampedNumber(key: string, fallback: number, min: number, max: number): number {
   try {
-    const v = Number(localStorage.getItem(key))
+    const raw = localStorage.getItem(key)
+    if (raw === null || raw.trim() === '') return fallback
+    const v = Number(raw)
     return Number.isFinite(v) ? Math.min(max, Math.max(min, v)) : fallback
   } catch {
     return fallback

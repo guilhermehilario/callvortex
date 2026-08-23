@@ -43,6 +43,8 @@ export default function VoiceChannelScreen({ channel }: { channel: Channel }): R
     voiceSessions,
     voiceMuted,
     voiceDeafened,
+    micVolume,
+    outputVolume,
     speakingUsers,
     peerVolumes,
     setPeerVolume,
@@ -144,15 +146,21 @@ export default function VoiceChannelScreen({ channel }: { channel: Channel }): R
                     {isMe && <span className="voice-tile-you">(você)</span>}
                   </span>
 
-                  {joined && isMe && (voiceMuted || voiceDeafened) && (
+                  {joined && isMe && (voiceMuted || voiceDeafened || micVolume === 0 || outputVolume === 0) && (
                     <div className="voice-tile-badges">
-                      {voiceMuted && (
-                        <span className="voice-tile-badge red" title="Microfone silenciado">
+                      {(voiceMuted || micVolume === 0) && (
+                        <span
+                          className={`voice-tile-badge ${voiceMuted ? 'red' : 'amber'}`}
+                          title={voiceMuted ? 'Microfone silenciado' : 'Volume do microfone em 0% — ninguém consegue ouvir você'}
+                        >
                           <MicOffIcon size={13} />
                         </span>
                       )}
-                      {voiceDeafened && (
-                        <span className="voice-tile-badge red" title="Sem som">
+                      {(voiceDeafened || outputVolume === 0) && (
+                        <span
+                          className={`voice-tile-badge ${voiceDeafened ? 'red' : 'amber'}`}
+                          title={voiceDeafened ? 'Sem som' : 'Volume de saída em 0% — você não ouve os participantes'}
+                        >
                           <HeadphonesOffIcon size={13} />
                         </span>
                       )}

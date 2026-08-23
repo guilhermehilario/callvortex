@@ -299,6 +299,10 @@
 .voice-tile-badge.red {
   color: var(--red);
 }
+/* volume em 0% (não é mute de trilha, mas silencia na prática) */
+.voice-tile-badge.amber {
+  color: #f0b232;
+}
 /* volume do par aparece ao passar o mouse (como no Discord) */
 .voice-tile-volume {
   position: absolute;

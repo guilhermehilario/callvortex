@@ -34,15 +34,11 @@ function vdbg(...args: unknown[]): void {
 
 const ICE_SERVERS: RTCIceServer[] = [
   { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
-  { urls: 'stun:stun.services.mozilla.com' },
-  // TURN público (Open Relay): funciona como "ponte" quando a conexão direta
-  // é bloqueada por NAT restrito — essencial para voz entre redes diferentes.
-  // É gratuito para testes; para produção, recomenda-se um TURN próprio.
-  {
-    urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443'],
-    username: 'openrelayproject',
-    credential: 'openrelayproject'
-  }
+  { urls: 'stun:stun.cloudflare.com:3478' }
+  // NOTA: o TURN público OpenRelay foi removido — seu DNS não resolve mais
+  // (verificado em 23/08/2026) e cada tentativa atrasava o ICE gathering.
+  // Para voz entre redes com NAT restrito, provisione um TURN próprio
+  // (ex.: coturn self-hosted ou Cloudflare Calls TURN) e adicione aqui.
 ]
 
 /**
