@@ -74,6 +74,11 @@ export function useVoice({ profile, activeServerId, notify }: UseVoiceDeps): Voi
   const voiceManagerRef = useRef<VoiceManager | null>(null)
   if (!voiceManagerRef.current) voiceManagerRef.current = new VoiceManager()
 
+  // Diagnóstico em dev: inspeção ao vivo da malha de voz via CDP
+  if (import.meta.env.DEV) {
+    ;(window as unknown as { __voice?: VoiceManager }).__voice = voiceManagerRef.current
+  }
+
   const profileRef = useRef<Profile | null>(profile)
   useEffect(() => {
     profileRef.current = profile

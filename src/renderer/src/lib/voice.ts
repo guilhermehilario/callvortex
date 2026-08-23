@@ -271,6 +271,56 @@ export class VoiceManager {
     return this.deafened
   }
 
+  /**
+   * Diagnóstico (dev): retrato completo do estado interno da malha de voz
+   * para inspeção ao vivo via CDP (window.__voice.debugSnapshot()).
+   */
+  debugSnapshot(): Record<string, unknown> {
+    const trackInfo = (t: MediaStreamTrack | null | undefined): Record<string, unknown> | null =>
+      t ? { enabled: t.enabled, muted: t.muted, label: t.label || '(sem rótulo)', readyState: t.readyState } : null
+    return {
+      channelId: this.channelId,
+      muted: this.localMuted,
+      deafened: this.deafened,
+      micVolume: this.micVolume,
+      outputVolume: this.outputVolume,
+      outputDeviceId: this.outputDeviceId,
+      noiseSuppression: this.noiseSuppression,
+      audioCtxState: this.audioCtx?.state ?? null,
+      hasProcessedStream: !!this.processedStream,
+      sendTrack: trackInfo(this.getSendTrack()),
+      rawMicTrack: trackInfo(this.localStream?.getAudioTracks()[0] ?? null),
+      peers: [...this.pcs.entries()].map(([id, pc]) => ({
+        id: id.slice(0, 8),
+        connection: pc.connectionState,
+        ice: pc.iceConnectionState,
+        signaling: pc.signalingState,
+        sending: pc.getSenders().filter((s) => s.track).map((s) => s.track!.kind),
+        receiving: pc.getReceivers().filter((r) => r.track).map((r) => ({ kind: r.track!.kind, muted: r.track!.muted }))
+      })),
+      audioElements: [...this.audioEls.entries()].map(([id, el]) => ({
+        id: id.slice(0, 8),
+        muted: el.muted,
+        volume: el.volume,
+        paused: el.paused,
+        tracks: el.srcObject ? (el.srcObject as MediaStream).getAudioTracks().length : 0,
+        sinkId: typeof el.sinkId === 'string' ? el.sinkId.slice(0, 40) : String(el.sinkId)
+      })),
+      pendingIceQueues: [...this.pendingIce.entries()].map(([id, q]) => ({ id: id.slice(0, 8), queued: q.length })),
+      speaking: [...this.speaking].map((s) => s.slice(0, 8))
+    }
+  }
+
+  /** Diagnóstico (dev): acesso direto aos PCs para getStats via CDP. */
+  debugPcs(): [string, RTCPeerConnection][] {
+    return [...this.pcs.entries()]
+  }
+
+  /** Diagnóstico (dev): a trilha exata que está sendo enviada aos pares. */
+  debugSendTrack(): MediaStreamTrack | null {
+    return this.getSendTrack()
+  }
+
   // ------------------------------------------------------------
   // Entrar / sair do canal
   // ------------------------------------------------------------

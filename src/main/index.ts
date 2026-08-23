@@ -7,6 +7,11 @@ app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required')
 // Captura de tela em Wayland via portal/PipeWire (sem efeito no X11/Windows)
 app.commandLine.appendSwitch('enable-features', 'WebRTCPipeWireCapturer')
 
+// TEMPORÁRIO (diagnóstico de voz): expõe o CDP quando CV_REMOTE_DEBUG_PORT=9222
+if (process.env.CV_REMOTE_DEBUG_PORT) {
+  app.commandLine.appendSwitch('remote-debugging-port', process.env.CV_REMOTE_DEBUG_PORT)
+}
+
 // ---------------------------------------------------------------------------
 // Credenciais lembradas ("Lembrar de mim")
 // Salvas criptografadas com safeStorage (DPAPI no Windows / Keychain no macOS)
