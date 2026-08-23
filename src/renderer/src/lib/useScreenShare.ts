@@ -78,11 +78,11 @@ export function useScreenShare({ voiceManager, profileId, voiceChannelId, notify
     return () => undefined
   }, [voiceChannelId, profileId])
 
-  // destruição final no unmount do provider
-  useEffect(() => {
-    const m = managerRef.current!
-    return () => m.destroy()
-  }, [])
+  // NÃO destrói o manager no unmount: ele é um singleton do provider que
+  // vive enquanto o app vive, e o React StrictMode (dev) simula um
+  // desmonte/remonte logo após a montagem — um destroy() aqui deixaria a
+  // instância morta em silêncio (botões sem qualquer reação). A limpeza
+  // real acontece no leaveChannel(), ao sair do canal/da conta.
 
   const loadScreenSources = useCallback(async () => listScreenSources(), [])
 

@@ -6,6 +6,10 @@ import { readFile, writeFile, rm } from 'fs/promises'
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required')
 // Captura de tela em Wayland via portal/PipeWire (sem efeito no X11/Windows)
 app.commandLine.appendSwitch('enable-features', 'WebRTCPipeWireCapturer')
+// TEMPORÁRIO (teste automatizado): porta de depuração via variável de ambiente
+if (process.env['CV_REMOTE_DEBUG_PORT']) {
+  app.commandLine.appendSwitch('remote-debugging-port', process.env['CV_REMOTE_DEBUG_PORT'])
+}
 
 // ---------------------------------------------------------------------------
 // Credenciais lembradas ("Lembrar de mim")

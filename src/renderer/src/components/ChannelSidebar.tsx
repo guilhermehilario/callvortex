@@ -3,9 +3,10 @@ import { uploadAvatar } from '../lib/api'
 import type { Channel } from '../lib/types'
 import { useApp } from '../lib/useApp'
 import Avatar from './Avatar'
-import { ActivitiesIcon, BroadcastIcon, ChevronDownIcon, GearIcon, HeadphonesIcon, HeadphonesOffIcon, MicIcon, MicOffIcon, PencilIcon, PhoneOffIcon, PowerIcon, RouterIcon, ScreenShareIcon, VideoIcon } from './Icons'
+import { ActivitiesIcon, BroadcastIcon, ChevronDownIcon, GearIcon, HeadphonesIcon, HeadphonesOffIcon, MicIcon, MicOffIcon, PencilIcon, PhoneOffIcon, PowerIcon, RouterIcon, VideoIcon } from './Icons'
 import MicPicker from './MicPicker'
 import OutputPicker from './OutputPicker'
+import ScreenShareButton from './ScreenShareButton'
 import SignalBars from './SignalBars'
 
 /** "30 s", "5 min 30 s", "1 h 12 min 30 s" — duração desde o início da atividade. */
@@ -340,12 +341,10 @@ function VoiceConnectedPanel(): React.JSX.Element | null {
       </div>
 
       <div className="voice-quick-actions">
-        <button className="voice-quick-action" title="Câmera / vídeo">
+        <button className="voice-quick-action" title="Câmera / vídeo" disabled>
           <VideoIcon size={18} />
         </button>
-        <button className="voice-quick-action" title="Compartilhar tela">
-          <ScreenShareIcon size={18} />
-        </button>
+        <ScreenShareButton variant="quick" size={18} />
         <button className="voice-quick-action" title="Atividades">
           <ActivitiesIcon size={18} />
         </button>

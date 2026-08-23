@@ -103,7 +103,10 @@ export class ScreenShareManager {
   // Sessão segura por canal (entro/saio do canal de voz)
   // ------------------------------------------------------------
   enterChannel(channelId: string, myId: string): void {
-    if (this.destroyed) return
+    if (this.destroyed) {
+      dbg('enterChannel ignorado: manager destruído')
+      return
+    }
     this.channelId = channelId
     this.myId = myId
     this.signaling.subscribe(channelId, myId)
@@ -131,7 +134,10 @@ export class ScreenShareManager {
   // Retorna true se a UI deve abrir o picker de fontes.
   // ------------------------------------------------------------
   async beginStart(): Promise<boolean> {
-    if (this.destroyed) return false
+    if (this.destroyed) {
+      dbg('beginStart bloqueado: manager destruído (bug de ciclo de vida?)')
+      return false
+    }
     const channelId = this.voice?.joinedChannelId
     if (!channelId || !this.myId) {
       dbg('beginStart bloqueado: channelId=', channelId, 'myId=', this.myId)
@@ -200,7 +206,10 @@ export class ScreenShareManager {
    * Chamar com sourceId=null quando o usuário cancela o picker.
    */
   async startWithSource(sourceId: string | null): Promise<void> {
-    if (this.destroyed) return
+    if (this.destroyed) {
+      dbg('startWithSource ignorado: manager destruído')
+      return
+    }
     const channelId = this.voice?.joinedChannelId
     const voice = this.voice
     if (!channelId || !voice || !this.myId) return
@@ -276,7 +285,10 @@ export class ScreenShareManager {
   // Idempotente: chamadas repetidas não fazem nada.
   // ------------------------------------------------------------
   async stop(): Promise<void> {
-    if (this.destroyed) return
+    if (this.destroyed) {
+      dbg('stop ignorado: manager destruído')
+      return
+    }
     if (this.state.status !== 'sharing' && this.state.status !== 'starting') return
     const token = ++this.opToken
     const channelId = this.channelId ?? this.voice?.joinedChannelId ?? null

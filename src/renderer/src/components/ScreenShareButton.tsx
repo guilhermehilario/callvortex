@@ -4,13 +4,23 @@ import { listScreenSources } from '../lib/screenShare/capture'
 import type { ScreenSourceInfo } from '../lib/screenShare/types'
 import { MonitorIcon, MonitorOffIcon } from './Icons'
 
+interface ScreenShareButtonProps {
+  /**
+   * control → controles grandes da tela do canal de voz;
+   * quick   → ação rápida do painel "Voz conectada" (sidebar).
+   * O fluxo é o mesmo; muda apenas a classe/estilo.
+   */
+  variant?: 'control' | 'quick'
+  size?: number
+}
+
 /**
  * Botão de compartilhar tela dos controles da chamada.
  *  - ninguém compartilhando + estou na chamada → abre o fluxo (autoriza → picker)
  *  - EU compartilhando → para
  *  - OUTRO compartilhando → desabilitado (regra: um compartilhamento por canal)
  */
-export default function ScreenShareButton(): React.JSX.Element {
+export default function ScreenShareButton({ variant = 'control', size = 20 }: ScreenShareButtonProps): React.JSX.Element {
   const {
     profile,
     voiceChannelId,
@@ -26,6 +36,7 @@ export default function ScreenShareButton(): React.JSX.Element {
   const mine = screenShareState.status === 'sharing' && screenShareState.localStream !== null
   const otherSharing = screenShareState.sharerId !== null && screenShareState.sharerId !== profile?.id
   const busy = screenShareState.status === 'starting' || screenShareState.status === 'stopping'
+  const stateClass = mine ? 'active sharing' : otherSharing ? 'blocked' : ''
 
   const handleClick = (): void => {
     if (!joined || busy) return
@@ -53,13 +64,13 @@ export default function ScreenShareButton(): React.JSX.Element {
   return (
     <>
       <button
-        className={`voice-control ${mine ? 'active sharing' : ''} ${otherSharing && !mine ? 'blocked' : ''}`}
+        className={variant === 'quick' ? `voice-quick-action ${stateClass}` : `voice-control ${stateClass}`}
         title={title}
         onClick={handleClick}
         disabled={!joined || busy}
         aria-label={title}
       >
-        {mine ? <MonitorOffIcon size={20} /> : <MonitorIcon size={20} />}
+        {mine ? <MonitorOffIcon size={size} /> : <MonitorIcon size={size} />}
       </button>
       {pickerOpen && (
         <ScreenSharePickerInline

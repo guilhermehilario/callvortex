@@ -201,3 +201,20 @@
 .voice-control.blocked {
   opacity: 0.45;
 }
+
+/* ---------- Variante "ação rápida" (painel Voz conectada na sidebar) ---------- */
+.voice-quick-action.active {
+  background: var(--wine);
+  color: #fff;
+}
+.voice-quick-action.active:hover {
+  background: var(--wine);
+  filter: brightness(1.1);
+}
+.voice-quick-action.blocked {
+  opacity: 0.45;
+}
+.voice-quick-action:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
