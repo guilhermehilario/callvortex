@@ -6,10 +6,6 @@ import { readFile, writeFile, rm } from 'fs/promises'
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required')
 // Captura de tela em Wayland via portal/PipeWire (sem efeito no X11/Windows)
 app.commandLine.appendSwitch('enable-features', 'WebRTCPipeWireCapturer')
-// TEMPORÁRIO (teste automatizado): porta de depuração via variável de ambiente
-if (process.env['CV_REMOTE_DEBUG_PORT']) {
-  app.commandLine.appendSwitch('remote-debugging-port', process.env['CV_REMOTE_DEBUG_PORT'])
-}
 
 // ---------------------------------------------------------------------------
 // Credenciais lembradas ("Lembrar de mim")
@@ -130,19 +126,32 @@ function registerScreenShareIpc(): void {
   // entregar — a escolhida no nosso picker. Esse é o único caminho que
   // funciona em Wayland (portal/PipeWire) e também cobre X11 e Windows.
   session.defaultSession.setDisplayMediaRequestHandler((_request, callback) => {
+    // O callback é de uso ÚNICO e o Chromium pode reemitir a mesma
+    // requisição (comum em Wayland/PipeWire): guarda contra chamada dupla,
+    // que derrubaria a captura com "One-time callback was called more than once".
+    let answered = false
+    const answer = (streams: Electron.Streams): void => {
+      if (answered) return
+      answered = true
+      try {
+        callback(streams)
+      } catch {
+        // callback já consumido por uma reemissão anterior — ignora
+      }
+    }
     const wanted = pendingScreenSourceId
     if (!wanted) {
-      callback({})
+      answer({})
       return
     }
     void desktopCapturer
       .getSources({ types: ['screen', 'window'] })
       .then((sources) => {
         const source = sources.find((s) => s.id === wanted)
-        if (source) callback({ video: source })
-        else callback({})
+        if (source) answer({ video: source })
+        else answer({})
       })
-      .catch(() => callback({}))
+      .catch(() => answer({}))
       .finally(() => {
         if (pendingScreenSourceId === wanted) pendingScreenSourceId = null
       })

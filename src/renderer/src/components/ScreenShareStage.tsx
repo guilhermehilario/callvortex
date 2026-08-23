@@ -63,6 +63,12 @@ export default function ScreenShareStage({ members }: { members: VoicePeerInfo[]
           !mine && <div className="ss-stage-placeholder">Aguardando o vídeo…</div>
         )}
         {mine && stream && <div className="ss-preview-tag">Prévia local</div>}
+        {/* parar sempre visível sobre o vídeo — sem precisar procurar */}
+        {mine && stream && (
+          <button className="ss-stop-fab" onClick={() => void stopScreenShare()}>
+            Parar compartilhamento
+          </button>
+        )}
       </div>
     </div>
   )

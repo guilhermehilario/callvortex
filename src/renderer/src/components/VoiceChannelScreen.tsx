@@ -5,7 +5,7 @@ import Avatar from './Avatar'
 import { HeadphonesIcon, HeadphonesOffIcon, MicIcon, MicOffIcon, PhoneOffIcon, VolumeHighIcon, VolumeMuteIcon } from './Icons'
 import MicPicker from './MicPicker'
 import ScreenShareButton from './ScreenShareButton'
-import ScreenShareStage, { ScreenSharingDot } from './ScreenShareStage'
+import { ScreenSharingDot } from './ScreenShareStage'
 import SignalBars from './SignalBars'
 
 function formatActivity(startedAtIso: string, nowMs: number): string | null {
@@ -68,7 +68,6 @@ export default function VoiceChannelScreen({ channel }: { channel: Channel }): R
       </header>
 
       <div className="voice-screen-body">
-        {joined && <ScreenShareStage members={members} />}
         <div className="voice-screen-icon">🔊</div>
         <h2 className="voice-screen-title">{channel.name}</h2>
         <p className="voice-screen-hint">

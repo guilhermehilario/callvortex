@@ -7,6 +7,7 @@ import ChatArea from './components/ChatArea'
 import MemberList from './components/MemberList'
 import Modals from './components/Modals'
 import Logo from './components/Logo'
+import ScreenShareStage from './components/ScreenShareStage'
 
 function SetupScreen(): React.JSX.Element {
   return (
@@ -53,12 +54,18 @@ function Toast(): React.JSX.Element | null {
 }
 
 function MainLayout(): React.JSX.Element {
-  const { screen } = useApp()
+  const { screen, voiceRoster } = useApp()
   return (
     <div className="app-shell">
       <ServerRail />
       <ChannelSidebar />
-      <ChatArea />
+      {/* O palco fica ACIMA de qualquer conteúdo: aparece em todas as telas
+          (canal de texto, DMs…) enquanto alguém estiver compartilhando —
+          ele mesmo decide quando renderizar (sharerId ativo). */}
+      <div className="app-main">
+        <ScreenShareStage members={voiceRoster} />
+        <ChatArea />
+      </div>
       {screen?.type === 'server' && <MemberList serverId={screen.serverId} />}
       <Toast />
       <Modals />
