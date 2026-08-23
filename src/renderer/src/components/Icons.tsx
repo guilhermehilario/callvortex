@@ -190,3 +190,24 @@ export function PowerIcon({ size = 20, className }: IconProps): React.JSX.Elemen
     </svg>
   )
 }
+
+export function MonitorIcon({ size = 20, className }: IconProps): React.JSX.Element {
+  return (
+    <svg {...base(size, className)}>
+      <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+      <line x1="8" y1="21" x2="16" y2="21" />
+      <line x1="12" y1="17" x2="12" y2="21" />
+    </svg>
+  )
+}
+
+export function MonitorOffIcon({ size = 20, className }: IconProps): React.JSX.Element {
+  return (
+    <svg {...base(size, className)}>
+      <path d="M17 17H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h1m5.66 0H20a2 2 0 0 1 2 2v10a2 2 0 0 1-.6 1.42" />
+      <line x1="8" y1="21" x2="16" y2="21" />
+      <line x1="12" y1="17" x2="12" y2="21" />
+      <line x1="1" y1="1" x2="23" y2="23" style={slashStyle} />
+    </svg>
+  )
+}

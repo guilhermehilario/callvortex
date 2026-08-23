@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, ipcMain, safeStorage } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, safeStorage, desktopCapturer } from 'electron'
 import { join } from 'path'
 import { readFile, writeFile, rm } from 'fs/promises'
 
@@ -69,6 +69,40 @@ function registerCredentialsIpc(): void {
       return true
     } catch {
       return false
+    }
+  })
+}
+
+// ---------------------------------------------------------------------------
+// Compartilhamento de tela: lista as fontes capturáveis (telas e janelas).
+// O desktopCapturer só existe no processo principal; o renderer recebe
+// apenas metadados (id, nome, miniatura) e faz a captura em si via
+// getUserMedia — nenhum acesso genérico ao Node é exposto.
+// ---------------------------------------------------------------------------
+interface ScreenSourceInfo {
+  id: string
+  name: string
+  thumbnail: string | null
+  icon: string | null
+}
+
+function registerScreenShareIpc(): void {
+  ipcMain.handle('screen-share:get-sources', async (e): Promise<ScreenSourceInfo[]> => {
+    if (!isTrustedSender(e)) return []
+    try {
+      const sources = await desktopCapturer.getSources({
+        types: ['screen', 'window'],
+        thumbnailSize: { width: 320, height: 180 },
+        fetchWindowIcons: true
+      })
+      return sources.slice(0, 50).map((s) => ({
+        id: s.id,
+        name: s.name.trim() || (s.id.startsWith('screen:') ? 'Tela inteira' : 'Janela'),
+        thumbnail: s.thumbnail.isEmpty() ? null : s.thumbnail.toDataURL(),
+        icon: s.appIcon && !s.appIcon.isEmpty() ? s.appIcon.toDataURL() : null
+      }))
+    } catch {
+      return []
     }
   })
 }
@@ -148,6 +182,7 @@ function createWindow(): void {
 
 app.whenReady().then(() => {
   registerCredentialsIpc()
+  registerScreenShareIpc()
   createWindow()
 
   app.on('activate', () => {

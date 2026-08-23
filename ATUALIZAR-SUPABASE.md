@@ -47,6 +47,32 @@ se `profiles`, `channels` e `servers` estão na lista de tabelas.
 Ou teste direto no app: renomeie um canal (deve aparecer para todos) e troque
 o nome de usuário (deve atualizar ao vivo para os outros).
 
+## 2. Compartilhamento de tela (novo)
+
+Para habilitar o **compartilhamento de tela** em um projeto que já tem dados,
+rode apenas:
+
+```
+supabase/migrations/20260823120000_screen_share.sql
+```
+
+Esse arquivo é **idempotente** e seguro para projetos com dados:
+
+- ✅ Cria as tabelas `screen_shares` (estado de quem compartilha) e `call_signals` (sinalização WebRTC efêmera) com **RLS ativado**
+- ✅ Cria as funções `is_call_participant`, `start_screen_share`, `touch_screen_share`, `stop_screen_share` e `send_call_signal`
+- ✅ Adiciona as duas tabelas na publicação Realtime (com proteção contra duplicação)
+- ❌ Não apaga nem altera dados existentes (canais, mensagens, perfis, servidores, DMs, emojis, voz)
+
+Passo a passo: igual à seção anterior — copie o conteúdo do arquivo no
+SQL Editor e clique em **Run**.
+
+### Conferir que funcionou
+
+No painel: **Database → Publications → supabase_realtime** deve listar
+também `screen_shares` e `call_signals`. No app: entre num canal de voz e
+clique em "Compartilhar tela" — os outros participantes devem ver o
+indicador 🖥️ e receber a imagem.
+
 ---
 
 ## 3. ⚠️ O que NÃO fazer
@@ -78,9 +104,10 @@ vez e depois as migrações).
 ```
 Projeto NOVO (do zero)
   └─ rode supabase/schema.sql (uma vez)
-      └─ depois as migrações (avatars-emojis, voice, realtime-profiles)
+      └─ depois as migrações (avatars-emojis, voice, realtime-profiles, screen_share)
 
 Projeto EXISTENTE (com dados)
   └─ rode só supabase/migration-realtime-profiles.sql (idempotente, seguro)
+      └─ + supabase/migrations/20260823120000_screen_share.sql para compartilhamento de tela
       └─ NÃO rode o schema.sql inteiro de novo
 ```

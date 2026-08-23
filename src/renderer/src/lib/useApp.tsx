@@ -10,6 +10,7 @@ import React, {
 import { getSupabase } from './supabase'
 import * as api from './api'
 import { useVoice } from './useVoice'
+import { useScreenShare } from './useScreenShare'
 import { useRealtimeSubscriptions } from './realtime'
 import { measurePing, qualityFromPing } from './internet'
 import { VOICE_REJOIN_MS, readVoiceSession } from './settings'
@@ -58,6 +59,16 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
   // ------------------------------------------------------------
   const activeServerId = screen?.type === 'server' ? screen.serverId : null
   const voice = useVoice({ profile, activeServerId, notify })
+
+  // ------------------------------------------------------------
+  // Compartilhamento de tela (reutiliza a malha WebRTC da voz)
+  // ------------------------------------------------------------
+  const screenShare = useScreenShare({
+    voiceManager: voice.voiceManager,
+    profileId: profile?.id ?? null,
+    voiceChannelId: voice.voiceChannelId,
+    notify
+  })
 
   // ------------------------------------------------------------
   // Realtime (presença, DMs, servidores, canais, voz, perfis)
@@ -443,6 +454,7 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
   const value = useMemo<AppContextValue>(
     () => ({
       ...voice,
+      ...screenShare,
       authState,
       profile,
       servers,
@@ -485,6 +497,7 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
     }),
     [
       voice,
+      screenShare,
       authState,
       profile,
       servers,

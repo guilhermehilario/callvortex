@@ -1,0 +1,197 @@
+/* ---------------------------------------------------------- */
+/* Compartilhamento de tela (picker, palco, indicadores)       */
+/* ---------------------------------------------------------- */
+
+/* ---------- Picker (escolha de tela/janela) ---------- */
+.ss-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ss-picker {
+  background: var(--bg-secondary);
+  border-radius: 10px;
+  width: min(720px, calc(100vw - 48px));
+  max-height: min(80vh, 640px);
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  gap: 14px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
+.ss-picker-header h3 {
+  margin: 0 0 4px;
+  font-size: 17px;
+}
+
+.ss-picker-header p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.ss-picker-grid {
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+  flex: 1;
+  align-content: start;
+}
+
+.ss-picker-empty {
+  grid-column: 1 / -1;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 24px 0;
+}
+
+.ss-source {
+  background: var(--bg-primary);
+  border: 2px solid transparent;
+  border-radius: 8px;
+  padding: 8px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: inherit;
+  transition:
+    border-color 0.15s ease,
+    transform 0.1s ease;
+}
+
+.ss-source:hover {
+  border-color: var(--blurple);
+  transform: translateY(-1px);
+}
+
+.ss-thumb {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 5px;
+  background: var(--bg-tertiary);
+}
+
+.ss-thumb-empty {
+  display: block;
+}
+
+.ss-source-name {
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ss-picker-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* ---------- Palco (visualização) ---------- */
+.ss-stage {
+  width: 100%;
+  background: var(--bg-tertiary);
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.ss-stage-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.25);
+  font-size: 13px;
+}
+
+.ss-stage-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ss-status {
+  color: var(--text-muted);
+  background: var(--bg-primary);
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.ss-status.live {
+  color: #fff;
+  background: var(--red);
+}
+
+.ss-stop-btn {
+  margin-left: auto;
+  background: var(--red);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ss-stop-btn:hover {
+  filter: brightness(1.1);
+}
+
+.ss-stage-body {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  min-height: 180px;
+}
+
+.ss-video {
+  width: 100%;
+  max-height: 56vh;
+  object-fit: contain;
+  display: block;
+}
+
+.ss-stage-placeholder {
+  color: var(--text-muted);
+  padding: 40px 16px;
+  font-size: 13px;
+}
+
+.ss-preview-tag {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.55);
+  color: var(--text-normal);
+  font-size: 11px;
+  border-radius: 999px;
+  padding: 3px 9px;
+  pointer-events: none;
+}
+
+/* ---------- Indicador na lista de membros ---------- */
+.ss-dot {
+  font-size: 12px;
+  line-height: 1;
+}

@@ -15,6 +15,7 @@
 @import './styles/sidebar.css';
 @import './styles/user-panel.css';
 @import './styles/voice.css';
+@import './styles/screenshare.css';
 @import './styles/member-list.css';
 @import './styles/chat.css';
 @import './styles/modals.css';

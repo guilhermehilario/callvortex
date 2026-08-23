@@ -11,6 +11,15 @@ interface SignalMsg {
   candidate?: RTCIceCandidateInit
 }
 
+/** Sinal gerado pelos PCs — consumido pelo ScreenShareManager (via segura). */
+export type PeerSignalMsg = SignalMsg
+
+/** Oferta de renegociação destinada a um par específico. */
+export interface PeerOffer {
+  peerId: string
+  sdp: RTCSessionDescriptionInit
+}
+
 // URL do módulo do supressor de ruído (AudioWorklet) — cache compartilhado
 // entre o VoiceManager e o teste de microfone, para carregar o blob só uma vez.
 let noiseModuleUrlCache: string | null = null
@@ -228,11 +237,23 @@ export class VoiceManager {
   // saída: dispositivo (setSinkId) e volume geral aplicado ao áudio recebido
   private outputDeviceId: string | null = null
   private outputVolume = 1
+  // ------------------------------------------------------------
+  // Compartilhamento de tela (vídeo via a MESMA malha WebRTC do áudio)
+  // A sinalização da tela usa um canal próprio e seguro (call_signals,
+  // protegido por RLS) — este campo é o "sink" que o ScreenShareManager
+  // registra; enquanto ele existir, os ICE candidates seguem por lá.
+  // ------------------------------------------------------------
+  private screenStream: MediaStream | null = null
+  private secureSend: ((msg: SignalMsg) => void) | null = null
 
   onRoster: ((users: VoicePeerInfo[]) => void) | null = null
   onSpeaking: ((userId: string, speaking: boolean) => void) | null = null
   onLocalLevel: ((level: number) => void) | null = null
   onPeerSignal: ((userId: string, quality: number) => void) | null = null
+  /** stream de tela de um par (null quando encerrou ou desconectou) */
+  onRemoteScreen: ((peerId: string, stream: MediaStream | null) => void) | null = null
+  /** estado da conexão com cada par (para indicar conectando/reconectando) */
+  onPeerConnectionState: ((peerId: string, state: RTCPeerConnectionState) => void) | null = null
   onError: ((message: string) => void) | null = null
 
   get joinedChannelId(): string | null {
@@ -369,6 +390,9 @@ export class VoiceManager {
     await this.stopProcessing()
     this.localStream?.getTracks().forEach((t) => t.stop())
     this.localStream = null
+    // encerra qualquer sessão de tela pendente da chamada que estou deixando
+    this.screenStream = null
+    this.secureSend = null
     this.me = null
     this.localMuted = false
     this.deafened = false
@@ -596,17 +620,29 @@ export class VoiceManager {
     const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS })
 
     pc.onicecandidate = (e) => {
-      if (e.candidate && this.channel) {
-        this.send({ type: 'ice', to: peerId, from: this.me!.id, candidate: e.candidate.toJSON() })
-      }
+      if (!e.candidate) return
+      // durante uma sessão de tela os sinais seguem pela via segura (RLS);
+      // fora dela, pelo broadcast do Realtime (áudio, comportamento atual)
+      const msg: SignalMsg = { type: 'ice', to: peerId, from: this.me!.id, candidate: e.candidate.toJSON() }
+      if (this.secureSend) this.secureSend(msg)
+      else this.send(msg)
     }
 
     pc.ontrack = (e) => {
       const [stream] = e.streams
-      if (stream) this.attachRemote(peerId, stream)
+      if (!stream) return
+      if (stream.getTracks().some((t) => t.kind === 'video')) {
+        // stream de compartilhamento de tela (vídeo)
+        this.onRemoteScreen?.(peerId, stream)
+        const [videoTrack] = stream.getVideoTracks()
+        videoTrack?.addEventListener('ended', () => this.onRemoteScreen?.(peerId, null))
+      } else {
+        this.attachRemote(peerId, stream)
+      }
     }
 
     pc.onconnectionstatechange = () => {
+      this.onPeerConnectionState?.(peerId, pc.connectionState)
       // 'disconnected' pode ser só um soluço da rede; só encerra em falha de fato
       if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
         this.closePeer(peerId)
@@ -614,7 +650,10 @@ export class VoiceManager {
     }
 
     const track = this.getSendTrack()
-    if (track) pc.addTrack(track, this.localStream as MediaStream)
+    if (track && this.localStream) pc.addTrack(track, this.localStream)
+    // novo participante chegando durante um compartilhamento já recebe o vídeo
+    const screenTrack = this.screenStream?.getVideoTracks()[0]
+    if (screenTrack) pc.addTrack(screenTrack, this.screenStream!)
     return pc
   }
 
@@ -717,7 +756,102 @@ export class VoiceManager {
       cleanup()
       this.detectorCleanups.delete(peerId)
     }
+    // par saiu: encerra a exibição da tela dele (se havia)
+    this.onRemoteScreen?.(peerId, null)
     this.setSpeaking(peerId, false)
+  }
+
+  // ------------------------------------------------------------
+  // Compartilhamento de tela (publicação/remoção + renegociação)
+  // A sinalização NÃO é enviada aqui — o ScreenShareManager roteia
+  // as ofertas retornadas pela via segura (call_signals, com RLS).
+  // ------------------------------------------------------------
+  /** Registra o sink de sinalização segura (null desliga). */
+  setSecureSignalSink(sink: ((msg: PeerSignalMsg) => void) | null): void {
+    this.secureSend = sink
+  }
+
+  get isPublishingScreen(): boolean {
+    return this.screenStream !== null
+  }
+
+  /**
+   * Publica a trilha de vídeo em todos os PCs existentes e gera uma
+   * renegociação (oferta) por par. Participantes que chegarem DEPOIS
+   * recebem a trilha direto no createPc.
+   */
+  async publishScreenTrack(stream: MediaStream): Promise<PeerOffer[]> {
+    if (!this.me) throw new Error('Você precisa estar num canal de voz.')
+    const [track] = stream.getVideoTracks()
+    if (!track) throw new Error('A captura não contém vídeo.')
+    this.screenStream = stream
+    const offers: PeerOffer[] = []
+    for (const [peerId, pc] of this.pcs) {
+      pc.addTrack(track, stream)
+      const offer = await pc.createOffer()
+      await pc.setLocalDescription(offer)
+      offers.push({ peerId, sdp: pc.localDescription as RTCSessionDescriptionInit })
+    }
+    return offers
+  }
+
+  /**
+   * Remove a trilha de vídeo de todos os PCs e renegocia — sem o m-line
+   * de vídeo, o track remoto do espectador dispara "ended" e a tela some.
+   */
+  async unpublishScreenTrack(): Promise<PeerOffer[]> {
+    const stream = this.screenStream
+    this.screenStream = null
+    if (!stream) return []
+    const offers: PeerOffer[] = []
+    for (const [peerId, pc] of this.pcs) {
+      for (const sender of pc.getSenders()) {
+        if (sender.track?.kind === 'video') {
+          try {
+            pc.removeTrack(sender)
+          } catch {
+            // sender já inativo — segue para o próximo
+          }
+        }
+      }
+      // só renegocia pares que tinham vídeo publicado
+      if (pc.getSenders().some((s) => s.track?.kind === 'video') || pc.localDescription?.sdp?.includes('m=video')) {
+        const offer = await pc.createOffer()
+        await pc.setLocalDescription(offer)
+        offers.push({ peerId, sdp: pc.localDescription as RTCSessionDescriptionInit })
+      }
+    }
+    return offers
+  }
+
+  /**
+   * Responde a uma oferta de renegociação de tela (lado espectador).
+   * Retorna a answer para o manager enviar pela via segura.
+   */
+  async prepareScreenAnswer(peerId: string, offer: RTCSessionDescriptionInit): Promise<RTCSessionDescriptionInit | null> {
+    let pc = this.pcs.get(peerId)
+    if (!pc) {
+      // corrida: oferta chegou antes do presence sync — cria o PC na hora
+      pc = this.createPc(peerId)
+      this.pcs.set(peerId, pc)
+    }
+    await pc.setRemoteDescription(offer)
+    const answer = await pc.createAnswer()
+    await pc.setLocalDescription(answer)
+    const queued = this.pendingIce.get(peerId) ?? []
+    this.pendingIce.delete(peerId)
+    for (const c of queued) void pc.addIceCandidate(c).catch(() => undefined)
+    return pc.localDescription as RTCSessionDescriptionInit
+  }
+
+  /** Aplica uma answer de tela recebida (lado compartilhante). */
+  async applyScreenAnswer(peerId: string, answer: RTCSessionDescriptionInit): Promise<void> {
+    await this.handleAnswer(peerId, answer)
+  }
+
+  /** Aplica um candidato ICE recebido (fila automática se ainda não há remote description). */
+  applyRemoteCandidate(peerId: string, candidate: RTCIceCandidateInit): void {
+    this.addIceCandidate(peerId, candidate)
   }
 
   private setSpeaking(userId: string, speaking: boolean): void {

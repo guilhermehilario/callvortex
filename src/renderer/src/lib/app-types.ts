@@ -1,4 +1,5 @@
 import type { Channel, DmThreadWithOther, ModalType, Profile, Screen, Server, ServerEmoji, VoicePeerInfo } from './types'
+import type { ScreenShareApi } from './useScreenShare'
 
 export type AuthState = 'loading' | 'signedOut' | 'signedIn'
 
@@ -82,5 +83,11 @@ export interface AppContextValue {
   toggleVoiceDeafen: () => void
   loadMicrophones: () => Promise<void>
   selectMicrophone: (deviceId: string) => Promise<void>
+  // compartilhamento de tela
+  screenShareState: ScreenShareApi['screenShareState']
+  loadScreenSources: ScreenShareApi['loadScreenSources']
+  beginScreenShare: ScreenShareApi['beginScreenShare']
+  confirmScreenSource: ScreenShareApi['confirmScreenSource']
+  stopScreenShare: ScreenShareApi['stopScreenShare']
   notify: (kind: Notice['kind'], text: string) => void
 }

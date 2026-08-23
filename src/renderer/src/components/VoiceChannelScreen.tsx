@@ -4,6 +4,8 @@ import { useApp } from '../lib/useApp'
 import Avatar from './Avatar'
 import { HeadphonesIcon, HeadphonesOffIcon, MicIcon, MicOffIcon, PhoneOffIcon, VolumeHighIcon, VolumeMuteIcon } from './Icons'
 import MicPicker from './MicPicker'
+import ScreenShareButton from './ScreenShareButton'
+import ScreenShareStage, { ScreenSharingDot } from './ScreenShareStage'
 import SignalBars from './SignalBars'
 
 function formatActivity(startedAtIso: string, nowMs: number): string | null {
@@ -66,6 +68,7 @@ export default function VoiceChannelScreen({ channel }: { channel: Channel }): R
       </header>
 
       <div className="voice-screen-body">
+        {joined && <ScreenShareStage members={members} />}
         <div className="voice-screen-icon">🔊</div>
         <h2 className="voice-screen-title">{channel.name}</h2>
         <p className="voice-screen-hint">
@@ -92,6 +95,7 @@ export default function VoiceChannelScreen({ channel }: { channel: Channel }): R
                         {m.username}
                         {isMe && <span className="voice-member-you">(você)</span>}
                       </span>
+                      <ScreenSharingDot userId={m.userId} />
                       {joined && !isMe && <SignalBars quality={peerSignals[m.userId] ?? 0} />}
                     </span>
                     {joined && !isMe && (
@@ -126,6 +130,7 @@ export default function VoiceChannelScreen({ channel }: { channel: Channel }): R
             <button className={`voice-control ${voiceDeafened ? 'active' : ''}`} title={voiceDeafened ? 'Ouvir de novo' : 'Ficar surdo (sem som)'} onClick={toggleVoiceDeafen}>
               {voiceDeafened ? <HeadphonesOffIcon size={20} /> : <HeadphonesIcon size={20} />}
             </button>
+            {joined && <ScreenShareButton />}
             <button className="voice-control leave" title="Sair do canal de voz" onClick={() => void leaveVoice()}>
               <PhoneOffIcon size={20} />
             </button>
