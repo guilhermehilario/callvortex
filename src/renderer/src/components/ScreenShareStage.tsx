@@ -74,13 +74,13 @@ export default function ScreenShareStage({ members }: { members: VoicePeerInfo[]
   )
 }
 
-/** Ponto 🖥️ ao lado do nome de quem está compartilhando (lista de membros). */
+/** Selo 🖥️ sobre o tile de quem está compartilhando (grade da sala). */
 export function ScreenSharingDot({ userId }: { userId: string }): React.JSX.Element | null {
   const { screenShareState } = useApp()
   if (screenShareState.sharerId !== userId) return null
   return (
     <span className="ss-dot" title="Compartilhando a tela" aria-label="Compartilhando a tela">
-      🖥️
+      <MonitorIcon size={14} />
     </span>
   )
 }

@@ -159,104 +159,231 @@
   color: #fff;
 }
 
-/* tela do canal de voz */
-.voice-screen-body {
+/* tela do canal de voz (layout de chamada estilo Discord) */
+.voice-call {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+/* ícone do canal no cabeçalho */
+.voice-call-channel-icon {
+  color: var(--text-muted);
+  display: inline-flex;
+  flex-shrink: 0;
+}
+.voice-screen-activity {
+  color: var(--green);
+}
+
+/* estado "fora da sala": convite centralizado */
+.voice-call-empty {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 12px;
-  padding: 24px;
   text-align: center;
+  padding: 24px;
 }
-.voice-screen-icon {
-  font-size: 64px;
-  animation: pulse 2s ease-in-out infinite;
+.voice-call-empty-icon {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: var(--bg-tile);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-.voice-screen-title {
+.voice-call-empty-title {
   font-size: 22px;
   font-weight: 700;
 }
-.voice-screen-hint {
+.voice-call-empty-hint {
   color: var(--text-muted);
   font-size: 14px;
   max-width: 380px;
   line-height: 1.5;
 }
-.voice-members {
+.voice-join-btn {
+  margin-top: 8px;
+  padding: 12px 24px;
+  font-size: 15px;
+}
+
+/* grade de tiles dos participantes */
+.voice-tiles {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 10px;
+  align-content: start;
+}
+.voice-tile {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  background: var(--bg-tile);
+  border-radius: 8px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  width: 100%;
-  max-width: 420px;
-  max-height: 42vh;
-  overflow-y: auto;
-  margin: 12px 0;
-}
-.voice-member {
-  display: flex;
   align-items: center;
+  justify-content: center;
   gap: 12px;
-  background: var(--bg-modifier-hover);
-  border-radius: 8px;
-  padding: 8px 12px;
+  min-width: 0;
 }
-.voice-member-avatar {
+.voice-tile.speaking .voice-tile-name {
+  color: #fff;
+}
+.voice-tile-avatar {
   border-radius: 50%;
   line-height: 0;
-  flex-shrink: 0;
+  transition: box-shadow 0.1s ease-out;
 }
-.voice-member-avatar.speaking {
+.voice-tile-avatar.speaking {
   box-shadow: 0 0 0 3px var(--green);
 }
-.voice-member-info {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.voice-member-name {
+.voice-tile-name {
   font-size: 14px;
   font-weight: 600;
   color: var(--text-normal);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.voice-member-name-text {
-  min-width: 0;
+  max-width: 88%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.voice-member-you {
+.voice-tile-you {
   color: var(--text-muted);
   font-size: 11px;
   font-weight: 500;
   margin-left: 6px;
 }
-.voice-member-volume {
+/* canto superior: compartilhamento à esquerda, sinal à direita */
+.voice-tile-top {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 18px;
+  z-index: 1;
+}
+.voice-tile-signal {
+  margin-left: auto;
+  display: inline-flex;
+}
+/* selos de estado (mudo/surdo) sobre o próprio tile */
+.voice-tile-badges {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  display: flex;
+  gap: 4px;
+  z-index: 1;
+}
+.voice-tile-badge {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--bg-floating);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.voice-tile-badge.red {
+  color: var(--red);
+}
+/* volume do par aparece ao passar o mouse (como no Discord) */
+.voice-tile-volume {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 6px;
   display: flex;
   align-items: center;
   gap: 8px;
+  padding: 16px 4px 4px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.65), transparent);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+  z-index: 2;
 }
-.voice-member-vol-icon {
-  font-size: 13px;
+.voice-tile:hover .voice-tile-volume,
+.voice-tile-volume:focus-within {
+  opacity: 1;
+  pointer-events: auto;
+}
+.voice-tile-vol-icon {
+  color: #fff;
   width: 16px;
   text-align: center;
+  flex-shrink: 0;
+  display: inline-flex;
 }
-.voice-member-volume input[type='range'] {
+.voice-tile-volume input[type='range'] {
   flex: 1;
   min-width: 0;
 }
-.voice-member-vol-value {
-  font-size: 11px;
-  color: var(--text-muted);
-  width: 34px;
-  text-align: right;
+
+/* dock de controles flutuante na base (estilo chamada) */
+.voice-controls-dock {
+  margin-top: auto;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding-top: 16px;
+  position: relative;
+}
+.voice-controls-dock .voice-control {
+  width: 46px;
+  height: 46px;
+  color: var(--text-normal);
+}
+.voice-controls-dock .voice-control.leave {
+  background: var(--red);
+  color: #fff;
+}
+.voice-controls-dock .voice-control.leave:hover {
+  filter: brightness(0.9);
+}
+.voice-controls-dock .voice-control.settings {
+  width: 26px;
+  height: 46px;
+  margin-left: -14px;
+  border-radius: 13px 0 0 13px;
+  background: var(--bg-modifier-hover);
+  color: var(--text-muted);
+}
+.voice-controls-dock .voice-control.settings svg {
+  transition: transform 0.15s;
+}
+.voice-controls-dock .voice-control.settings.open {
+  color: var(--green);
+}
+.voice-controls-dock .voice-control.settings.open svg {
+  transform: rotate(180deg);
+}
+/* popover de configurações de microfone acima do dock */
+.voice-dock-picker {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 320px;
+  max-width: calc(100vw - 48px);
+  z-index: 30;
+}
+.voice-dock-picker .mic-picker {
+  width: 100%;
 }
 
 /* indicador de sinal de rede (estilo Discord) */
@@ -287,33 +414,10 @@
 .signal-bars.ok .signal-bar.on { background: #f0b232; }
 .signal-bars.bad .signal-bar.on { background: var(--red); }
 .signal-bars.none .signal-bar.on { background: var(--text-muted); }
-.voice-screen-controls {
-  display: flex;
-  gap: 10px;
-  margin-top: 8px;
-}
-.voice-screen-controls .voice-control {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-}
-.voice-join-btn {
-  margin-top: 8px;
-  padding: 12px 24px;
-  font-size: 15px;
-}
-.voice-screen-activity {
-  color: var(--green);
-}
 
 /* seletor de microfone (card de configurações) */
 .voice-connected-panel .mic-picker {
   width: 100%;
-}
-.voice-screen-body .mic-picker {
-  width: 320px;
-  max-width: 100%;
-  margin-top: 16px;
 }
 .mic-picker {
   background: var(--bg-primary);
@@ -413,7 +517,7 @@
   margin-top: 10px;
 }
 .mic-volume-slider,
-.voice-member-volume input[type='range'] {
+.voice-tile-volume input[type='range'] {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
@@ -424,7 +528,7 @@
   cursor: pointer;
 }
 .mic-volume-slider::-webkit-slider-thumb,
-.voice-member-volume input[type='range']::-webkit-slider-thumb {
+.voice-tile-volume input[type='range']::-webkit-slider-thumb {
   -webkit-appearance: none;
   width: 12px;
   height: 12px;
@@ -434,7 +538,7 @@
   cursor: grab;
 }
 .mic-volume-slider::-moz-range-thumb,
-.voice-member-volume input[type='range']::-moz-range-thumb {
+.voice-tile-volume input[type='range']::-moz-range-thumb {
   width: 12px;
   height: 12px;
   border-radius: 50%;
@@ -443,7 +547,7 @@
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
 }
 .mic-volume-slider::-moz-range-track,
-.voice-member-volume input[type='range']::-moz-range-track {
+.voice-tile-volume input[type='range']::-moz-range-track {
   height: 4px;
   border-radius: 2px;
   background: rgba(255, 255, 255, 0.12);

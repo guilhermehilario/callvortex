@@ -39,8 +39,8 @@
     padding-left: 12px;
     padding-right: 12px;
   }
-  .voice-screen-body {
-    padding: 16px;
+  .voice-call {
+    padding: 12px;
   }
   .toast {
     left: 80px;
@@ -50,17 +50,18 @@
 
 /* janelas baixas: modais e telas centrais rolam em vez de cortar */
 @media (max-height: 640px) {
-  .voice-screen-body {
+  .voice-call-empty {
     justify-content: flex-start;
     padding-top: 24px;
   }
-  .voice-screen-icon {
-    font-size: 44px;
+  .voice-call-empty-icon {
+    width: 72px;
+    height: 72px;
   }
 }
 
 @media (max-height: 560px) {
-  .voice-members {
-    max-height: 30vh;
+  .voice-tiles {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   }
 }

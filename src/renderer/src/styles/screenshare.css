@@ -210,10 +210,17 @@
   pointer-events: none;
 }
 
-/* ---------- Indicador na lista de membros ---------- */
+/* ---------- Indicador na grade da sala (selo sobre o tile) ---------- */
 .ss-dot {
-  font-size: 12px;
-  line-height: 1;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--bg-floating);
+  color: var(--green);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 /* Estado "outro está compartilhando": esmaecido, mas clicável — o banco
