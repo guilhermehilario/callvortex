@@ -37,13 +37,20 @@ insert into public.servers (id, name, owner_id) values
   ('10000000-0000-4000-8000-000000000002', 'Servidor 2', '00000000-0000-4000-8000-000000000004');
 
 insert into public.server_members (server_id, user_id) values
+  -- user_a e user_b participam da chamada C1 (servidor S1)
   ('10000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000001'),
-  ('10000000-0000-4000-8000-000000000002', '00000000-0000-4000-8000-000000000001'),
-  ('10000000-0000-4000-8000-000000000004', '00000000-0000-4000-8000-000000000002');
+  ('10000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000002'),
+  -- dono do servidor S2/canal C2 (outra chamada)
+  ('10000000-0000-4000-8000-000000000002', '00000000-0000-4000-8000-000000000004');
 
 insert into public.channels (id, server_id, name, type) values
   ('20000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001', 'voz-1', 'voice'),
   ('20000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000002', 'voz-2', 'voice');
+
+-- Sala C1 com sessão de voz VIVA (heartbeats frescos): o estado normal
+-- durante uma chamada. Os testes de morte da sala manipulam esta linha.
+insert into public.voice_sessions (channel_id, started_at, updated_at)
+values ('20000000-0000-4000-8000-000000000001', now(), now());
 
 -- ------------------------------------------------------------
 -- Helper: assume a identidade de um usuário autenticado
@@ -191,10 +198,10 @@ end $$;
 select pg_temp.act_as('00000000-0000-4000-8000-000000000001');
 select pg_temp.expect_error(
   'ataque2-canal-alheio',
-  $$ select public.send_call_signal(
-       '20000000-0000-4000-8000-000000000002',
-       '00000000-0000-4000-8000-000000000004', 'screen-offer', '{}'::jsonb) $$,
-  'permiss|participa'
+   $$ select public.send_call_signal(
+        '20000000-0000-4000-8000-000000000002',
+        '00000000-0000-4000-8000-000000000004', 'screen-offer', '{}'::jsonb) $$,
+  'permiss'
 );
 
 -- user_x não participa de C1: enviar para ele deve falhar
@@ -238,7 +245,7 @@ select pg_temp.expect_error(
 
 -- ============================================================
 -- T10 — UPDATE em call_signals é impossível (imutabilidade)
--- Esperado: 0 linhas atualizadas (policy ausente)
+-- Esperado: falha por falta de privilégio OU 0 linhas alteradas
 -- ============================================================
 select pg_temp.act_as('00000000-0000-4000-8000-000000000002'); -- user_b (destinatário)
 do $$
@@ -247,6 +254,8 @@ begin
   update public.call_signals set kind = 'screen-answer';
   get diagnostics n = row_count;
   if n > 0 then raise exception 'T10: UPDATE indevido afetou % linhas', n; end if;
+exception when insufficient_privilege then
+  null; -- nem privilégio de UPDATE existe: imutabilidade garantida
 end $$;
 
 -- ============================================================
@@ -290,7 +299,7 @@ end $$;
 -- T13 — Sessão órfã: start limpa sessão sem heartbeat (>90 s)
 -- Esperado: user_b consegue iniciar após expiração simulada
 -- ============================================================
-select pg_temp.act_as('postgres');
+select set_config('role', 'postgres', true); -- volta a ser dono do banco para envelhecer a sessão
 update public.screen_shares set updated_at = now() - interval '120 seconds'
   where channel_id = '20000000-0000-4000-8000-000000000001';
 select pg_temp.act_as('00000000-0000-4000-8000-000000000002'); -- user_b
@@ -309,12 +318,66 @@ end $$;
 -- T14 — Encerrar: só o próprio compartilhante (ou expiração)
 -- Esperado: stop de user_b apaga a linha dele
 -- ============================================================
-perform public.stop_screen_share('20000000-0000-4000-8000-000000000001');
+select public.stop_screen_share('20000000-0000-4000-8000-000000000001');
 do $$
 declare n int;
 begin
   select count(*) into n from public.screen_shares;
   if n <> 0 then raise exception 'T14: sobrou % sessão(ões) após stop', n; end if;
+end $$;
+
+-- ============================================================
+-- T15 — Sala morreu ⇒ compartilhamento morre com ela
+-- user_a compartilha; todos saem sem avisar (sessão de voz velha);
+-- o heartbeat do próprio user_a deve APAGAR a linha, não renovar.
+-- ============================================================
+select pg_temp.act_as('00000000-0000-4000-8000-000000000001'); -- user_a
+do $$
+begin
+  perform public.start_screen_share('20000000-0000-4000-8000-000000000001');
+end $$;
+select set_config('role', 'postgres', true);
+update public.voice_sessions
+set updated_at = now() - interval '10 minutes'
+where channel_id = '20000000-0000-4000-8000-000000000001';
+select pg_temp.act_as('00000000-0000-4000-8000-000000000001'); -- user_a
+do $$
+declare n int;
+begin
+  perform public.touch_screen_share('20000000-0000-4000-8000-000000000001');
+  select count(*) into n from public.screen_shares
+    where channel_id = '20000000-0000-4000-8000-000000000001';
+  if n <> 0 then raise exception 'T15: compartilhamento sobreviveu à sala morta (% linhas)', n; end if;
+end $$;
+
+-- ============================================================
+-- T16 — Retorno à sala limpa fantasmas (crash de quem compartilhava)
+-- Sala vazia (sessão apagada pelo fim grácil) + linha fantasma fresca
+-- deixada por um crash. O primeiro a ENTRAR dispara ensure_voice_session,
+-- que deve apagar o fantasma — e permitir iniciar na sequência SEM o
+-- erro "já está compartilhando".
+-- ============================================================
+select set_config('role', 'postgres', true);
+delete from public.voice_sessions where channel_id = '20000000-0000-4000-8000-000000000001';
+insert into public.screen_shares (channel_id, user_id, started_at, updated_at)
+values ('20000000-0000-4000-8000-000000000001',
+        '00000000-0000-4000-8000-000000000001', now(), now()); -- fantasma do crash
+select pg_temp.act_as('00000000-0000-4000-8000-000000000002'); -- user_b volta à sala
+do $$
+declare started timestamptz; n int; uid uuid;
+begin
+  select public.ensure_voice_session('20000000-0000-4000-8000-000000000001') into started;
+  if started is null then raise exception 'T16: ensure não recriou a sessão'; end if;
+  select count(*) into n from public.screen_shares
+    where channel_id = '20000000-0000-4000-8000-000000000001';
+  if n <> 0 then raise exception 'T16: fantasma sobreviveu ao retorno (% linhas)', n; end if;
+  -- e agora iniciar DEVE funcionar sem "já está compartilhando"
+  perform public.start_screen_share('20000000-0000-4000-8000-000000000001');
+  select user_id into uid from public.screen_shares
+    where channel_id = '20000000-0000-4000-8000-000000000001';
+  if uid <> '00000000-0000-4000-8000-000000000002' then
+    raise exception 'T16: user_b não conseguiu assumir o slot (sharer=%)', uid;
+  end if;
 end $$;
 
 -- ============================================================

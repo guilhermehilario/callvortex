@@ -11,9 +11,6 @@ interface SignalMsg {
   candidate?: RTCIceCandidateInit
 }
 
-/** Sinal gerado pelos PCs — consumido pelo ScreenShareManager (via segura). */
-export type PeerSignalMsg = SignalMsg
-
 /** Oferta de renegociação destinada a um par específico. */
 export interface PeerOffer {
   peerId: string
@@ -28,6 +25,11 @@ export function getNoiseSuppressorModuleUrl(): string {
   const blob = new Blob([NOISE_WORKLET_SOURCE], { type: 'application/javascript' })
   noiseModuleUrlCache = URL.createObjectURL(blob)
   return noiseModuleUrlCache
+}
+
+/** Diagnóstico em dev: aparece no terminal via encaminhamento do console. */
+function vdbg(...args: unknown[]): void {
+  if (import.meta.env.DEV) console.debug('[voice]', ...args)
 }
 
 const ICE_SERVERS: RTCIceServer[] = [
@@ -239,12 +241,13 @@ export class VoiceManager {
   private outputVolume = 1
   // ------------------------------------------------------------
   // Compartilhamento de tela (vídeo via a MESMA malha WebRTC do áudio)
-  // A sinalização da tela usa um canal próprio e seguro (call_signals,
-  // protegido por RLS) — este campo é o "sink" que o ScreenShareManager
-  // registra; enquanto ele existir, os ICE candidates seguem por lá.
+  // A renegociação de tela trafega pela via segura (call_signals com RLS),
+  // mas TODO o ICE — do áudio e do vídeo — vai pelo broadcast: é instantâneo
+  // e não pode ficar refém de uma sessão de tela estar (ou não) ativa.
   // ------------------------------------------------------------
   private screenStream: MediaStream | null = null
-  private secureSend: ((msg: SignalMsg) => void) | null = null
+  // pares que já receberam aviso de falha de conexão (evita toast repetido)
+  private failedNotified = new Set<string>()
 
   onRoster: ((users: VoicePeerInfo[]) => void) | null = null
   onSpeaking: ((userId: string, speaking: boolean) => void) | null = null
@@ -392,12 +395,12 @@ export class VoiceManager {
     this.localStream = null
     // encerra qualquer sessão de tela pendente da chamada que estou deixando
     this.screenStream = null
-    this.secureSend = null
     this.me = null
     this.localMuted = false
     this.deafened = false
     this.stopStatsPolling()
     this.peerSignals.clear()
+    this.failedNotified.clear()
     for (const userId of [...this.speaking]) this.setSpeaking(userId, false)
     this.onRoster?.([])
   }
@@ -621,11 +624,9 @@ export class VoiceManager {
 
     pc.onicecandidate = (e) => {
       if (!e.candidate) return
-      // durante uma sessão de tela os sinais seguem pela via segura (RLS);
-      // fora dela, pelo broadcast do Realtime (áudio, comportamento atual)
-      const msg: SignalMsg = { type: 'ice', to: peerId, from: this.me!.id, candidate: e.candidate.toJSON() }
-      if (this.secureSend) this.secureSend(msg)
-      else this.send(msg)
+      // ICE SEMPRE pelo broadcast: entrega instantânea, sem depender de
+      // escrita/leitura no banco nem de sessão de tela ativa.
+      this.send({ type: 'ice', to: peerId, from: this.me!.id, candidate: e.candidate.toJSON() })
     }
 
     pc.ontrack = (e) => {
@@ -642,9 +643,18 @@ export class VoiceManager {
     }
 
     pc.onconnectionstatechange = () => {
-      this.onPeerConnectionState?.(peerId, pc.connectionState)
+      const st = pc.connectionState
+      vdbg('pc', peerId.slice(0, 8), '→', st)
+      this.onPeerConnectionState?.(peerId, st)
+      if (st === 'failed') {
+        // uma vez por par: a mídia não vai fluir — avisa o usuário
+        if (!this.failedNotified.has(peerId)) {
+          this.failedNotified.add(peerId)
+          this.onError?.('Não foi possível conectar a um participante (rede bloqueada ou TURN indisponível).')
+        }
+      }
       // 'disconnected' pode ser só um soluço da rede; só encerra em falha de fato
-      if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
+      if (st === 'failed' || st === 'closed') {
         this.closePeer(peerId)
       }
     }
@@ -705,7 +715,15 @@ export class VoiceManager {
 
   private addIceCandidate(peerId: string, candidate: RTCIceCandidateInit): void {
     const pc = this.pcs.get(peerId)
-    if (!pc) return
+    if (!pc) {
+      // candidato chegou antes de qualquer offer/answer: guarda na fila —
+      // handleOffer/handleAnswer dão destino a ele quando o PC existir
+      const q = this.pendingIce.get(peerId) ?? []
+      q.push(candidate)
+      this.pendingIce.set(peerId, q)
+      vdbg('ICE na fila (PC ainda não existe):', peerId.slice(0, 8))
+      return
+    }
     if (pc.remoteDescription) {
       void pc.addIceCandidate(candidate).catch(() => undefined)
     } else {
@@ -751,6 +769,7 @@ export class VoiceManager {
       this.audioEls.delete(peerId)
     }
     this.pendingIce.delete(peerId)
+    this.failedNotified.delete(peerId)
     const cleanup = this.detectorCleanups.get(peerId)
     if (cleanup) {
       cleanup()
@@ -763,14 +782,9 @@ export class VoiceManager {
 
   // ------------------------------------------------------------
   // Compartilhamento de tela (publicação/remoção + renegociação)
-  // A sinalização NÃO é enviada aqui — o ScreenShareManager roteia
-  // as ofertas retornadas pela via segura (call_signals, com RLS).
+  // As ofertas/answers da renegociação são enviadas pelo ScreenShareManager
+  // direto pela via segura (call_signals, com RLS) — o ICE segue broadcast.
   // ------------------------------------------------------------
-  /** Registra o sink de sinalização segura (null desliga). */
-  setSecureSignalSink(sink: ((msg: PeerSignalMsg) => void) | null): void {
-    this.secureSend = sink
-  }
-
   get isPublishingScreen(): boolean {
     return this.screenStream !== null
   }

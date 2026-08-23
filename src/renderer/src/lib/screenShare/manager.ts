@@ -13,7 +13,7 @@
  *   stop()         → remove trilha, renegocia, libera a reserva, limpa tudo
  */
 import { getSupabase } from '../supabase'
-import type { VoiceManager, PeerSignalMsg } from '../voice'
+import type { VoiceManager } from '../voice'
 import { captureScreenSource } from './capture'
 import { ScreenShareSignaling, type ScreenSignal } from './signaling'
 import { INITIAL_SCREEN_SHARE_STATE, type ScreenShareState } from './types'
@@ -266,9 +266,6 @@ export class ScreenShareManager {
     }
     if (token !== this.opToken) return
 
-    // próximos sinais WebRTC gerados pelos PCs (ICE…) seguem pela via segura
-    voice.setSecureSignalSink((msg) => this.routeSecure(msg))
-
     this.startHeartbeat(channelId)
     this.clearStartGuard()
     dbg('compartilhamento ativo (sharing)')
@@ -309,7 +306,6 @@ export class ScreenShareManager {
       } catch {
         // segue para a limpeza mesmo se a renegociação falhar
       }
-      this.voice.setSecureSignalSink(null)
       localStream.getTracks().forEach((t) => t.stop())
     }
 
@@ -332,7 +328,6 @@ export class ScreenShareManager {
         this.patch({ sharerId: signal.senderId })
         const answer = await voice.prepareScreenAnswer(signal.senderId, sdp).catch(() => null)
         if (answer) {
-          voice.setSecureSignalSink((msg) => this.routeSecure(msg))
           await this.signaling.sendSignal(this.channelId!, signal.senderId, 'screen-answer', { sdp: answer })
         }
         break
@@ -349,19 +344,6 @@ export class ScreenShareManager {
         voice.applyRemoteCandidate(signal.senderId, candidate)
         break
       }
-    }
-  }
-
-  /** Encaminha sinais gerados pelos PCs (ICE durante a sessão de tela). */
-  private routeSecure(msg: PeerSignalMsg): void {
-    const channelId = this.channelId
-    if (!channelId) return
-    if (msg.type === 'ice' && msg.candidate) {
-      void this.signaling.sendSignal(channelId, msg.to, 'screen-ice', { candidate: msg.candidate })
-    } else if (msg.type === 'offer' && msg.offer) {
-      void this.signaling.sendSignal(channelId, msg.to, 'screen-offer', { sdp: msg.offer })
-    } else if (msg.type === 'answer' && msg.answer) {
-      void this.signaling.sendSignal(channelId, msg.to, 'screen-answer', { sdp: msg.answer })
     }
   }
 

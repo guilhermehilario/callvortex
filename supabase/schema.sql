@@ -487,6 +487,7 @@ as $$
 declare
   started timestamptz;
   upd timestamptz;
+  reiniciou boolean := false;
 begin
   if not exists (
     select 1 from public.channels c
@@ -504,14 +505,22 @@ begin
     insert into public.voice_sessions (channel_id, started_at, updated_at)
     values (target_channel, now(), now())
     returning started_at into started;
+    reiniciou := true;
   elsif now() - upd > interval '5 minutes' then
     update public.voice_sessions
     set started_at = now(), updated_at = now()
     where channel_id = target_channel
     returning started_at into started;
+    reiniciou := true;
   else
     update public.voice_sessions set updated_at = now()
     where channel_id = target_channel;
+  end if;
+
+  -- Sala (re)começando agora: nenhum compartilhamento de tela de uma
+  -- rodada anterior sobrevive (app fechou sem avisar etc.)
+  if reiniciou then
+    delete from public.screen_shares where channel_id = target_channel;
   end if;
 
   return started;
@@ -673,9 +682,17 @@ begin
     raise exception 'Sem permissão para este canal de voz';
   end if;
 
-  delete from public.screen_shares
-  where channel_id = target_channel
-    and updated_at < now() - interval '90 seconds';
+  -- sessões órfãs liberam o canal: sem heartbeat recente OU sem sala viva
+  delete from public.screen_shares s
+  where s.channel_id = target_channel
+    and (
+      s.updated_at < now() - interval '90 seconds'
+      or not exists (
+        select 1 from public.voice_sessions vs
+        where vs.channel_id = s.channel_id
+          and vs.updated_at > now() - interval '5 minutes'
+      )
+    );
 
   begin
     insert into public.screen_shares (channel_id, user_id)
@@ -699,8 +716,21 @@ begin
   if not public.is_call_participant(target_channel) then
     raise exception 'Sem permissão para este canal de voz';
   end if;
+
+  -- A sala acabou (todos saíram / apps morreram): o compartilhamento
+  -- morre com ela — apagar dispara DELETE no Realtime e limpa os espectadores.
+  if not exists (
+    select 1 from public.voice_sessions
+    where channel_id = target_channel
+      and updated_at > now() - interval '5 minutes'
+  ) then
+    delete from public.screen_shares
+    where channel_id = target_channel and user_id = auth.uid();
+    return;
+  end if;
+
   update public.screen_shares
-  set updated_at = now()
+  set updated_at = clock_timestamp() -- now() congela na transação; heartbeat quer o instante real
   where channel_id = target_channel and user_id = auth.uid();
 end
 $$;
@@ -777,3 +807,21 @@ grant execute on function public.start_screen_share(uuid) to authenticated;
 grant execute on function public.touch_screen_share(uuid) to authenticated;
 grant execute on function public.stop_screen_share(uuid) to authenticated;
 grant execute on function public.send_call_signal(uuid, uuid, text, jsonb) to authenticated;
+
+-- ------------------------------------------------------------
+-- Privilégios de TABELA (a RLS decide as LINHAS visíveis;
+-- estes grants liberam as OPERAÇÕES que o app usa).
+-- screen_shares: só leitura direta (escrita sempre via RPC).
+-- call_signals: ler, inserir (com policy de dono) e consumir.
+-- UPDATE não é concedido = sinais imutáveis.
+-- O revoke de anon/authenticated neutraliza os "default
+-- privileges" do ambiente hospedado, que dão GRANT ALL.
+-- service_role fica como está (convenção Supabase / admin).
+-- ------------------------------------------------------------
+revoke all on table public.screen_shares from anon;
+revoke all on table public.screen_shares from authenticated;
+grant select on table public.screen_shares to authenticated;
+
+revoke all on table public.call_signals from anon;
+revoke all on table public.call_signals from authenticated;
+grant select, insert, delete on table public.call_signals to authenticated;

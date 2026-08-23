@@ -201,7 +201,7 @@ begin
     raise exception 'Sem permissão para este canal de voz';
   end if;
   update public.screen_shares
-  set updated_at = now()
+  set updated_at = clock_timestamp() -- now() congela na transação; heartbeat quer o instante real
   where channel_id = target_channel and user_id = auth.uid();
 end
 $$;
@@ -291,3 +291,16 @@ grant execute on function public.start_screen_share(uuid) to authenticated;
 grant execute on function public.touch_screen_share(uuid) to authenticated;
 grant execute on function public.stop_screen_share(uuid) to authenticated;
 grant execute on function public.send_call_signal(uuid, uuid, text, jsonb) to authenticated;
+
+-- ------------------------------------------------------------
+-- Privilégios de TABELA (a RLS decide as LINHAS visíveis;
+-- estes grants liberam as OPERAÇÕES que o app usa).
+-- screen_shares: só leitura direta (escrita sempre via RPC).
+-- call_signals: ler, inserir (com policy de dono) e consumir.
+-- UPDATE não é concedido = sinais imutáveis (teste T10).
+-- ------------------------------------------------------------
+revoke all on table public.screen_shares from public;
+grant select on table public.screen_shares to authenticated;
+
+revoke all on table public.call_signals from public;
+grant select, insert, delete on table public.call_signals to authenticated;
