@@ -13,11 +13,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
-      - run: npm ci
+          cache: yarn
+      - run: yarn install --frozen-lockfile
       - name: Regra de estilos (docs/CONVENCOES.md)
-        run: npm run check:styles
+        run: yarn check:styles
       - name: Typecheck
-        run: npm run typecheck
+        run: yarn typecheck
       - name: Build
-        run: npm run build
+        run: yarn build

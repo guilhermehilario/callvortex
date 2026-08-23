@@ -42,13 +42,13 @@ if [ "$need_node" = "1" ]; then
   curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
   sudo apt-get install -y nodejs
 fi
-echo "Node: $(node -v) | npm: $(npm -v)"
+echo "Node: $(node -v) | yarn: $(yarn -v)"
 
 # ------------------------------------------------------------
 # 3) Dependências do projeto
 # ------------------------------------------------------------
-echo "Instalando dependências (npm install)…"
-npm install --no-audit --no-fund
+echo "Instalando dependências (yarn install)…"
+yarn install
 
 # ------------------------------------------------------------
 # 4) Arquivo .env (chaves do Supabase)
@@ -77,12 +77,12 @@ if [ "$MODE" = "dist" ]; then
     sudo apt-get install -y fakeroot
   fi
   echo "Gerando pacotes Linux (AppImage + .deb) em release/ …"
-  npm run dist
+  yarn dist
   echo ""
   echo "✅ Pronto! Em release/ você encontra:"
   echo "   - CallVortex-*.AppImage   → portátil (não precisa instalar)"
   echo "   - callvortex_*.deb        → instalável (sudo apt install ./arquivo.deb)"
 else
   echo "Rodando o app… (pressione Ctrl+C para sair)"
-  npm run dev
+  yarn dev
 fi

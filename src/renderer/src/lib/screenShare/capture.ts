@@ -12,37 +12,47 @@ import type { ScreenSourceInfo } from './types'
 export async function listScreenSources(): Promise<ScreenSourceInfo[]> {
   try {
     const sources = await window.api.screenShare.getSources()
+    if (import.meta.env.DEV) console.debug('[screen-share] fontes recebidas:', sources.length)
     return Array.isArray(sources) ? sources : []
-  } catch {
+  } catch (e) {
+    console.error('[screen-share] falha ao listar fontes:', e)
     return []
   }
 }
 
 /**
- * Captura a fonte escolhida. Restringe resolução/frame rate: conteúdo de
- * tela não precisa de 60 fps — 15 fps + 1080p economizam banda na malha P2P.
+ * Captura a fonte escolhida. O fluxo é:
+ *   1. registra a fonte no processo principal (IPC);
+ *   2. chama getDisplayMedia() — o handler do main entrega exatamente essa
+ *      fonte. Esse é o único caminho que funciona em Wayland (portal/PipeWire)
+ *      e também cobre X11 e Windows.
+ * Restringe resolução/frame rate: conteúdo de tela não precisa de 60 fps —
+ * 15 fps + 1080p economizam banda na malha P2P.
  */
 export async function captureScreenSource(sourceId: string): Promise<MediaStream> {
   if (!sourceId || typeof sourceId !== 'string') {
     throw new Error('Fonte de tela inválida.')
   }
-  // Constraints proprietárias do Electron/Chromium para desktop capture.
-  const constraints = {
-    audio: false,
-    video: {
-      mandatory: {
-        chromeMediaSource: 'desktop',
-        chromeMediaSourceId: sourceId,
-        minWidth: 640,
-        minHeight: 360,
-        maxWidth: 1920,
-        maxHeight: 1080,
-        maxFrameRate: 15
-      }
-    }
-  } as unknown as MediaStreamConstraints
+  const registered = await window.api.screenShare.selectSource(sourceId)
+  if (!registered) throw new Error('Não foi possível registrar a fonte escolhida.')
 
-  const stream = await navigator.mediaDevices.getUserMedia(constraints)
+  let stream: MediaStream
+  try {
+    stream = await navigator.mediaDevices.getDisplayMedia({
+      audio: false,
+      video: {
+        frameRate: { max: 15, ideal: 15 },
+        width: { max: 1920 },
+        height: { max: 1080 }
+      }
+    })
+  } catch (e) {
+    const name = e instanceof DOMException ? e.name : ''
+    if (name === 'NotAllowedError') throw new Error('Permissão de captura negada pelo sistema.')
+    if (name === 'NotSupportedError')
+      throw new Error('Captura de tela não suportada neste ambiente (sessão/portal de vídeo).')
+    throw new Error('Não foi possível capturar a tela.')
+  }
   if (stream.getVideoTracks().length === 0) {
     stream.getTracks().forEach((t) => t.stop())
     throw new Error('A captura não retornou nenhuma imagem.')

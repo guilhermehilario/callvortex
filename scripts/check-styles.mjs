@@ -7,7 +7,7 @@
 //   - algum módulo de styles/ não estiver importado no index.css
 //   - algum @import do index.css não existir ou estiver duplicado
 //   - a ordem de cascata estiver errada (tokens 1º, responsive último)
-// Uso: node scripts/check-styles.mjs  (ou npm run check:styles)
+// Uso: node scripts/check-styles.mjs  (ou yarn check:styles)
 // ------------------------------------------------------------
 import { readdirSync, readFileSync, existsSync } from 'node:fs'
 import { join, dirname, basename } from 'node:path'

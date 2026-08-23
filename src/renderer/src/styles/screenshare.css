@@ -195,3 +195,9 @@
   font-size: 12px;
   line-height: 1;
 }
+
+/* Estado "outro está compartilhando": esmaecido, mas clicável — o banco
+   decide (sessão ativa = aviso; sessão órfã = libera e autoriza). */
+.voice-control.blocked {
+  opacity: 0.45;
+}

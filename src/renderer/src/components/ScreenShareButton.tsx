@@ -28,13 +28,15 @@ export default function ScreenShareButton(): React.JSX.Element {
   const busy = screenShareState.status === 'starting' || screenShareState.status === 'stopping'
 
   const handleClick = (): void => {
-    if (!joined || busy || otherSharing) return
+    if (!joined || busy) return
     if (mine) {
       void stopScreenShare().then(() => notify('success', 'Compartilhamento encerrado.'))
       return
     }
     void (async () => {
-      // fase 1: autorização no banco ANTES da captura — só depois abre o picker
+      // fase 1: autorização no banco ANTES da captura — só depois abre o
+      // picker. Se houver sessão órfã de outro usuário, o próprio banco a
+      // expira e autoriza; se for ativa de verdade, nega com aviso.
       const ok = await beginScreenShare()
       if (ok) setPickerOpen(true)
     })()
@@ -43,7 +45,7 @@ export default function ScreenShareButton(): React.JSX.Element {
   const title = mine
     ? 'Parar compartilhamento de tela'
     : otherSharing
-      ? 'Alguém já está compartilhando a tela'
+      ? 'Alguém está compartilhando a tela (se parou há pouco, tente de novo em instantes)'
       : !joined
         ? 'Entre no canal de voz para compartilhar a tela'
         : 'Compartilhar tela ou janela'
@@ -51,10 +53,10 @@ export default function ScreenShareButton(): React.JSX.Element {
   return (
     <>
       <button
-        className={`voice-control ${mine ? 'active sharing' : ''}`}
+        className={`voice-control ${mine ? 'active sharing' : ''} ${otherSharing && !mine ? 'blocked' : ''}`}
         title={title}
         onClick={handleClick}
-        disabled={!joined || busy || otherSharing}
+        disabled={!joined || busy}
         aria-label={title}
       >
         {mine ? <MonitorOffIcon size={20} /> : <MonitorIcon size={20} />}

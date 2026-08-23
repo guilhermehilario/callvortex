@@ -18,6 +18,8 @@ export interface Api {
   clearCredentials: () => Promise<boolean>
   screenShare: {
     getSources: () => Promise<ScreenSourceInfo[]>
+    /** registra a fonte escolhida no picker; o getDisplayMedia() usará ela */
+    selectSource: (sourceId: string) => Promise<boolean>
   }
 }
 

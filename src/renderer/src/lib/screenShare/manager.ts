@@ -20,6 +20,19 @@ import { INITIAL_SCREEN_SHARE_STATE, type ScreenShareState } from './types'
 
 const HEARTBEAT_MS = 30_000
 
+/** Diagnóstico em dev: aparece no terminal via encaminhamento do console. */
+function dbg(...args: unknown[]): void {
+  if (import.meta.env.DEV) console.debug('[screen-share]', ...args)
+}
+
+/** Rejeita se a promessa não resolver em ms — evita silêncio eterno. */
+function withTimeout<T>(p: PromiseLike<T>, ms = 10_000): Promise<T> {
+  return Promise.race([
+    p,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error('O Supabase não respondeu a tempo.')), ms))
+  ])
+}
+
 export class ScreenShareManager {
   private state: ScreenShareState = INITIAL_SCREEN_SHARE_STATE
   private voice: VoiceManager | null = null
@@ -30,6 +43,8 @@ export class ScreenShareManager {
   private opToken = 0
   private heartbeat: number | null = null
   private endedHandler: (() => void) | null = null
+  /** guarda o clique: se 'starting' não evoluir, reseta com aviso */
+  private startGuard: number | null = null
   private destroyed = false
 
   onChange: ((state: ScreenShareState) => void) | null = null
@@ -119,10 +134,14 @@ export class ScreenShareManager {
     if (this.destroyed) return false
     const channelId = this.voice?.joinedChannelId
     if (!channelId || !this.myId) {
+      dbg('beginStart bloqueado: channelId=', channelId, 'myId=', this.myId)
       this.fail('Entre no canal de voz para compartilhar a tela.')
       return false
     }
-    if (this.state.status === 'starting' || this.state.status === 'stopping') return false // corrida: ignora cliques duplos
+    if (this.state.status === 'starting' || this.state.status === 'stopping') {
+      dbg('beginStart ignorado: status=', this.state.status)
+      return false // corrida: ignora cliques duplos
+    }
     if (this.state.status === 'sharing' && this.state.localStream) {
       this.fail('Você já está compartilhando a tela.')
       return false
@@ -134,11 +153,14 @@ export class ScreenShareManager {
 
     const token = ++this.opToken
     this.patch({ status: 'starting', error: null })
+    this.armStartGuard(channelId, token)
+    dbg('beginStart: chamando RPC start_screen_share…')
 
     try {
-      const { error } = await getSupabase().rpc('start_screen_share', { target_channel: channelId })
+      const { error } = await withTimeout(getSupabase().rpc('start_screen_share', { target_channel: channelId }))
       if (error) throw new Error(translateRpcError(error.message))
     } catch (e) {
+      dbg('start_screen_share falhou:', e)
       if (token === this.opToken) {
         this.resetToIdle()
         this.fail(e instanceof Error ? e.message : 'Não foi possível iniciar o compartilhamento.')
@@ -150,7 +172,27 @@ export class ScreenShareManager {
       await releaseReservation(channelId)
       return false
     }
+    dbg('beginStart autorizado — abrir picker')
     return true // autorizado e reservado; UI mostra o picker
+  }
+
+  /** Se o RPC de reserva não responder, o clique nunca fica preso em 'starting'. */
+  private armStartGuard(channelId: string, token: number): void {
+    this.clearStartGuard()
+    this.startGuard = window.setTimeout(() => {
+      if (this.opToken !== token || this.state.status !== 'starting') return
+      dbg('startGuard: estourou — resetando')
+      void releaseReservation(channelId)
+      this.resetToIdle()
+      this.fail('O servidor demorou para responder. Tente novamente.')
+    }, 15_000)
+  }
+
+  private clearStartGuard(): void {
+    if (this.startGuard !== null) {
+      clearTimeout(this.startGuard)
+      this.startGuard = null
+    }
   }
 
   /**
@@ -219,6 +261,8 @@ export class ScreenShareManager {
     voice.setSecureSignalSink((msg) => this.routeSecure(msg))
 
     this.startHeartbeat(channelId)
+    this.clearStartGuard()
+    dbg('compartilhamento ativo (sharing)')
     this.patch({
       status: 'sharing',
       localStream: stream,
@@ -239,6 +283,7 @@ export class ScreenShareManager {
     const localStream = this.state.localStream
     this.stopHeartbeat()
     this.clearEndedHandler()
+    this.clearStartGuard()
     this.patch({ status: 'idle', localStream: null })
 
     if (localStream && this.voice) {

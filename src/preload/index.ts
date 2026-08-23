@@ -20,10 +20,12 @@ const api = {
   saveCredentials: (creds: SavedCredentials): Promise<boolean> => ipcRenderer.invoke('credentials:save', creds),
   loadCredentials: (): Promise<SavedCredentials | null> => ipcRenderer.invoke('credentials:load'),
   clearCredentials: (): Promise<boolean> => ipcRenderer.invoke('credentials:clear'),
-  // Compartilhamento de tela — apenas listagem de fontes (captura em si é
-  // feita no renderer via getUserMedia com a fonte escolhida pelo usuário)
+  // Compartilhamento de tela — listagem das fontes (para o picker) e
+  // registro da fonte escolhida; a captura em si é feita no renderer via
+  // getDisplayMedia(), atendido pelo handler do processo principal.
   screenShare: {
-    getSources: (): Promise<ScreenSourceInfo[]> => ipcRenderer.invoke('screen-share:get-sources')
+    getSources: (): Promise<ScreenSourceInfo[]> => ipcRenderer.invoke('screen-share:get-sources'),
+    selectSource: (sourceId: string): Promise<boolean> => ipcRenderer.invoke('screen-share:select-source', sourceId)
   }
 }
 

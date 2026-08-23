@@ -13,20 +13,22 @@ Chat por texto e voz em tempo real com seus amigos. Desktop (Electron + React + 
 - 🖼️ Foto de perfil (clique no seu avatar no canto inferior esquerdo)
 - 😀 Emojis personalizados por servidor (dono gerencia; use `:nome:` nas mensagens)
 - 🔊 Canais de voz com chamadas em tempo real (WebRTC) — mudo, surdo e indicador de quem está falando
+- 🖥️ **Compartilhamento de tela** dentro da chamada (tela inteira ou janela), com prévia, indicador de quem está compartilhando e visualização P2P protegida por RLS
 - 🗑️ Excluir mensagens, canais e servidores
 - 📦 Gerar instalador .exe para distribuir aos amigos
 
 > **Atenção**: se você já rodou o `supabase/schema.sql` antes, rode também as
 > migrações no SQL Editor, nesta ordem: `migration-avatars-emojis.sql` (fotos +
-> emojis), `migration-voice.sql` (canais de voz) e
+> emojis), `migration-voice.sql` (canais de voz),
 > `migration-realtime-profiles.sql` (nome/foto de usuário, renomear canal e
-> exclusão de servidor em tempo real).
+> exclusão de servidor em tempo real) e
+> `migrations/20260823120000_screen_share.sql` (compartilhamento de tela).
 
 ### Sobre a voz (WebRTC)
 
 - O áudio é **ponto a ponto** (malha): cada participante se conecta diretamente aos outros; o Supabase só faz a sinalização (quem entrou, oferta/resposta, ICE) via Realtime.
-- A conexão usa servidores STUN públicos. Em redes com NAT restrito pode ser
-  preciso um servidor TURN (ex.: Twilio, Metered, Xirsys) — dá para adicionar depois.
+- O **compartilhamento de tela usa a mesma malha**: o vídeo viaja junto do áudio nos mesmos RTCPeerConnections. Quem está compartilhando e os sinais de renegociação trafegam pela tabela `call_signals` protegida por RLS — um usuário fora da chamada não lê nem envia sinalização.
+- A conexão usa servidores STUN públicos + TURN público (Open Relay). Em redes com NAT restrito pode ser preciso um TURN próprio (ex.: Twilio, Metered, Xirsys) — a lista de servidores fica em `ICE_SERVERS` (`src/renderer/src/lib/voice.ts`).
 
 ## Como rodar
 
@@ -46,8 +48,8 @@ VITE_SUPABASE_ANON_KEY=sua-anon-key
 ### 2. Instalar e rodar
 
 ```bash
-npm install
-npm run dev
+yarn install
+yarn dev
 ```
 
 O app abre em uma janela desktop. Crie sua conta e convide os amigos!
@@ -55,7 +57,7 @@ O app abre em uma janela desktop. Crie sua conta e convide os amigos!
 ## Empacotar para distribuir (Windows)
 
 ```bash
-npm run dist
+yarn dist
 ```
 
 Gera um instalador e uma versão portátil na pasta `release/`. Seus amigos precisarão apenas instalar e criar conta — o banco é compartilhado via Supabase.

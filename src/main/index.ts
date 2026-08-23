@@ -1,9 +1,11 @@
-import { app, shell, BrowserWindow, ipcMain, safeStorage, desktopCapturer } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, safeStorage, session, desktopCapturer } from 'electron'
 import { join } from 'path'
 import { readFile, writeFile, rm } from 'fs/promises'
 
 // O áudio (WebRTC + processamento) precisa rodar sem exigir clique prévio
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required')
+// Captura de tela em Wayland via portal/PipeWire (sem efeito no X11/Windows)
+app.commandLine.appendSwitch('enable-features', 'WebRTCPipeWireCapturer')
 
 // ---------------------------------------------------------------------------
 // Credenciais lembradas ("Lembrar de mim")
@@ -86,6 +88,9 @@ interface ScreenSourceInfo {
   icon: string | null
 }
 
+/** Fonte escolhida no picker aguardando o getDisplayMedia() do renderer. */
+let pendingScreenSourceId: string | null = null
+
 function registerScreenShareIpc(): void {
   ipcMain.handle('screen-share:get-sources', async (e): Promise<ScreenSourceInfo[]> => {
     if (!isTrustedSender(e)) return []
@@ -95,6 +100,7 @@ function registerScreenShareIpc(): void {
         thumbnailSize: { width: 320, height: 180 },
         fetchWindowIcons: true
       })
+      if (!app.isPackaged) console.log('[main] get-sources:', sources.length, 'fontes')
       return sources.slice(0, 50).map((s) => ({
         id: s.id,
         name: s.name.trim() || (s.id.startsWith('screen:') ? 'Tela inteira' : 'Janela'),
@@ -104,6 +110,38 @@ function registerScreenShareIpc(): void {
     } catch {
       return []
     }
+  })
+
+  // Registra a fonte escolhida no nosso picker; o getDisplayMedia() do
+  // renderer será atendido pelo handler abaixo usando essa fonte.
+  ipcMain.handle('screen-share:select-source', (e, sourceId: unknown): boolean => {
+    if (!isTrustedSender(e)) return false
+    if (typeof sourceId !== 'string' || sourceId.length === 0 || sourceId.length > 256) return false
+    pendingScreenSourceId = sourceId
+    return true
+  })
+
+  // Captura de tela no Electron moderno: o renderer chama
+  // navigator.mediaDevices.getDisplayMedia() e AQUI decidimos qual fonte
+  // entregar — a escolhida no nosso picker. Esse é o único caminho que
+  // funciona em Wayland (portal/PipeWire) e também cobre X11 e Windows.
+  session.defaultSession.setDisplayMediaRequestHandler((_request, callback) => {
+    const wanted = pendingScreenSourceId
+    if (!wanted) {
+      callback({})
+      return
+    }
+    void desktopCapturer
+      .getSources({ types: ['screen', 'window'] })
+      .then((sources) => {
+        const source = sources.find((s) => s.id === wanted)
+        if (source) callback({ video: source })
+        else callback({})
+      })
+      .catch(() => callback({}))
+      .finally(() => {
+        if (pendingScreenSourceId === wanted) pendingScreenSourceId = null
+      })
   })
 }
 
@@ -141,14 +179,21 @@ function createWindow(): void {
     console.error('[main] Falha ao carregar a página:', errorCode, errorDescription)
   })
 
-  // Erros de JavaScript do renderer aparecem no terminal também
+  // Mensagens do console do renderer aparecem no terminal em dev
   // (Electron 43 usa o objeto de evento como 1º argumento)
-  mainWindow.webContents.on('console-message', (details) => {
-    const d = details as unknown as { level?: string | number; message?: string }
-    if (d.level === 'error' || d.level === 'warning' || d.level === 3) {
-      console.error(`[renderer:${String(d.level)}]`, d.message ?? '')
-    }
-  })
+  if (!app.isPackaged) {
+    mainWindow.webContents.on('console-message', (details) => {
+      const d = details as unknown as { level?: string | number; message?: string }
+      const isError = d.level === 'error' || d.level === 3
+      const isWarn = d.level === 'warning' || d.level === 2
+      const isDevNoise = typeof d.message === 'string' && d.message.includes('Autofocus processing')
+      if (!isError && !isWarn && !isDevNoise) {
+        console.log(`[renderer]`, d.message ?? '')
+      } else if (isError) {
+        console.error(`[renderer]`, d.message ?? '')
+      }
+    })
+  }
 
   // Bloquear navegação da janela para qualquer site externo
   // (protege o preload e o window.api de páginas não confiáveis)

@@ -17,6 +17,7 @@
   "license": "ISC",
   "type": "commonjs",
   "private": true,
+  "packageManager": "yarn@1.22.22",
   "dependencies": {
     "@supabase/supabase-js": "^2.112.3",
     "react": "^19.2.8",
