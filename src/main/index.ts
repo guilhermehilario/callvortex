@@ -1,8 +1,9 @@
-import { app, shell, BrowserWindow, ipcMain, safeStorage, session, desktopCapturer } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, safeStorage, session, desktopCapturer, dialog } from 'electron'
 import { join } from 'path'
 import { readFile, writeFile, rm } from 'fs/promises'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
+import { autoUpdater } from 'electron-updater'
 
 const execFileAsync = promisify(execFile)
 
@@ -58,6 +59,34 @@ function registerVoiceIpc(): void {
     }
     return fixWindowsFirewall()
   })
+}
+
+/**
+ * Atualizações automáticas (electron-updater + GitHub Releases):
+ * verifica ao iniciar e a cada 4h; baixa em segundo plano e oferece
+ * reiniciar. Só roda empacotado — no dev, ignora.
+ */
+function registerUpdater(): void {
+  if (!app.isPackaged) return
+  autoUpdater.autoDownload = true
+  autoUpdater.on('update-downloaded', async () => {
+    const win = BrowserWindow.getAllWindows()[0]
+    if (!win) return
+    const { response } = await dialog.showMessageBox(win, {
+      type: 'info',
+      title: 'Atualização pronta',
+      message: 'Uma nova versão do CallVortex foi baixada.',
+      detail: 'Reinicie agora para aplicar. A chamada atual será encerrada.',
+      buttons: ['Reiniciar agora', 'Depois'],
+      defaultId: 0
+    })
+    if (response === 0) autoUpdater.quitAndInstall()
+  })
+  autoUpdater.on('error', (err) => {
+    console.log('[updater] erro (ignorável offline):', err.message.slice(0, 120))
+  })
+  void autoUpdater.checkForUpdatesAndNotify().catch(() => undefined)
+  setInterval(() => void autoUpdater.checkForUpdatesAndNotify().catch(() => undefined), 4 * 60 * 60 * 1000)
 }
 
 // O áudio (WebRTC + processamento) precisa rodar sem exigir clique prévio
@@ -305,6 +334,7 @@ app.whenReady().then(() => {
   registerCredentialsIpc()
   registerScreenShareIpc()
   registerVoiceIpc()
+  registerUpdater()
   createWindow()
 
   app.on('activate', () => {

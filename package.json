@@ -18,8 +18,13 @@
   "type": "commonjs",
   "private": true,
   "packageManager": "yarn@1.22.22",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/guilhermehilario/callvortex.git"
+  },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.3",
+    "electron-updater": "^6.8.9",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },
@@ -39,6 +44,12 @@
   "build": {
     "appId": "br.com.callvortex",
     "productName": "CallVortex",
+    "publish": {
+      "provider": "github",
+      "owner": "guilhermehilario",
+      "repo": "callvortex",
+      "releaseType": "release"
+    },
     "files": [
       "out/**/*"
     ],
@@ -50,6 +61,11 @@
       "target": [
         "portable"
       ]
+    },
+    "nsis": {
+      "include": "build/installer.nsh",
+      "oneClick": true,
+      "allowToChangeInstallationDirectory": false
     },
     "linux": {
       "icon": "build/icon.png",

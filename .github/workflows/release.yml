@@ -1,0 +1,56 @@
+name: Release
+
+# Cada push na main gera uma nova versão (0.1.<número do build>) e publica
+# no GitHub Releases — os apps instalados atualizam sozinhos (electron-updater).
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write   # necessário para criar a Release
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+
+      - run: yarn install --frozen-lockfile
+        shell: bash
+
+      - run: yarn typecheck
+        shell: bash
+
+      - name: Build (renderer/main)
+        run: yarn build
+        shell: bash
+
+      # Versão monotônica por número de execução → o electron-updater
+      # sempre enxerga a nova como mais recente.
+      - name: Empacotar e publicar
+        run: >
+          npx electron-builder
+          --config.extraMetadata.version=0.1.${{ github.run_number }}
+          --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: CallVortex-${{ matrix.os }}-${{ github.run_number }}
+          path: |
+            release/*.exe
+            release/*.AppImage
+            release/latest*.yml
+          if-no-files-found: error
