@@ -1,6 +1,6 @@
 {
   "name": "callvortex",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Chat por texto e voz para conversar com amigos",
   "main": "out/main/index.js",
   "scripts": {
@@ -54,8 +54,7 @@
     "linux": {
       "icon": "build/icon.png",
       "target": [
-        "AppImage",
-        "deb"
+        "AppImage"
       ],
       "category": "Network",
       "maintainer": "CallVortex",
