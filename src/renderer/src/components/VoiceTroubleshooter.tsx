@@ -154,9 +154,13 @@ export default function VoiceTroubleshooter({ onClose }: { onClose: () => void }
           })
         }
         const info = types.length ? ` (via ${[...new Set(types)].join('/')})` : ''
+        const dicaWin =
+            navigator.userAgent.includes('Windows')
+              ? ' No Windows: Segurança › Firewall › "Permitir um app pelo firewall" › marque CallVortex em Particular e Público. Se o pedido de permissão apareceu na 1ª execução e foi cancelado, ele fica bloqueado.'
+              : ''
         patch('p2p', {
           status: 'fail',
-          detail: `Nenhum par conectado. Rede bloqueando a conexão direta (roteador/firewall)${info}. Teste desativando VPN/firewall do Windows para este app.`
+          detail: `Nenhum par conectado — firewall/roteador bloqueando o áudio${info}.${dicaWin}`
         })
       }
     } catch {

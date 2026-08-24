@@ -808,7 +808,10 @@ export class VoiceManager {
             }, 1500)
           } else if (!this.failedNotified.has(peerId)) {
             this.failedNotified.add(peerId)
-            this.onError?.('Não foi possível conectar a um participante (rede bloqueada ou TURN indisponível).')
+            const dicaWin = navigator.userAgent.includes('Windows')
+              ? ' No Windows, permita o CallVortex no Firewall (Privado e Público) e rode o .exe mais recente.'
+              : ''
+            this.onError?.('Não foi possível conectar a um participante (rede bloqueada ou TURN indisponível).' + dicaWin)
           }
           return
         }
