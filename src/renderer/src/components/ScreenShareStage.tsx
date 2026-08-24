@@ -1,16 +1,23 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useApp } from '../lib/useApp'
 import type { VoicePeerInfo } from '../lib/types'
-import { MonitorIcon } from './Icons'
+import { MonitorIcon, ExpandIcon, ShrinkIcon, PipIcon } from './Icons'
 
 /**
  * Palco do compartilhamento: exibe a tela de quem está compartilhando
  * (a minha em prévia, ou a remota), com indicador e controle de parada.
  * Estados visíveis ao usuário: conectando / reconectando / encerrado.
+ * Botões de visualização (todos os participantes):
+ *   - tela cheia;  - janela flutuante (Picture-in-Picture do sistema).
  */
 export default function ScreenShareStage({ members }: { members: VoicePeerInfo[] }): React.JSX.Element | null {
   const { profile, screenShareState, stopScreenShare } = useApp()
   const videoRef = useRef<HTMLVideoElement>(null)
+  const stageRef = useRef<HTMLDivElement>(null)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const [pipSupported] = useState(
+    () => typeof document !== 'undefined' && document.pictureInPictureEnabled === true
+  )
 
   const sharerId = screenShareState.sharerId
   const mine = sharerId !== null && sharerId === profile?.id && screenShareState.localStream !== null
@@ -26,6 +33,37 @@ export default function ScreenShareStage({ members }: { members: VoicePeerInfo[]
       void el.play().catch(() => undefined)
     }
   }, [stream])
+
+  // acompanha entrada/saída da tela cheia (inclusive via tecla Esc)
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(document.fullscreenElement === stageRef.current)
+    document.addEventListener('fullscreenchange', onChange)
+    return () => document.removeEventListener('fullscreenchange', onChange)
+  }, [])
+
+  const toggleFullscreen = () => {
+    const el = stageRef.current
+    if (!el) return
+    if (document.fullscreenElement) {
+      void document.exitFullscreen().catch(() => undefined)
+    } else {
+      void el.requestFullscreen().catch(() => undefined)
+    }
+  }
+
+  const togglePip = () => {
+    const video = videoRef.current
+    if (!video) return
+    try {
+      if (document.pictureInPictureElement) {
+        void document.exitPictureInPicture().catch(() => undefined)
+      } else {
+        void video.requestPictureInPicture().catch(() => undefined)
+      }
+    } catch {
+      // sem suporte neste ambiente — botão nem aparece quando é o caso
+    }
+  }
 
   if (!sharerId) return null
   const sharer = members.find((m) => m.userId === sharerId)
@@ -43,7 +81,7 @@ export default function ScreenShareStage({ members }: { members: VoicePeerInfo[]
   }
 
   return (
-    <div className="ss-stage">
+    <div className="ss-stage" ref={stageRef}>
       <header className="ss-stage-header">
         <span className="ss-stage-title">
           <MonitorIcon size={16} />
@@ -54,6 +92,28 @@ export default function ScreenShareStage({ members }: { members: VoicePeerInfo[]
           <button className="ss-stop-btn" onClick={() => void stopScreenShare()}>
             Parar compartilhamento
           </button>
+        )}
+        {stream && (
+          <div className="ss-stage-tools">
+            <button
+              className="ss-icon-btn"
+              onClick={toggleFullscreen}
+              title={isFullscreen ? 'Sair da tela cheia' : 'Tela cheia'}
+              aria-label={isFullscreen ? 'Sair da tela cheia' : 'Tela cheia'}
+            >
+              {isFullscreen ? <ShrinkIcon size={16} /> : <ExpandIcon size={16} />}
+            </button>
+            {pipSupported && (
+              <button
+                className="ss-icon-btn"
+                onClick={togglePip}
+                title="Janela flutuante (separar da janela principal)"
+                aria-label="Janela flutuante"
+              >
+                <PipIcon size={16} />
+              </button>
+            )}
+          </div>
         )}
       </header>
       <div className="ss-stage-body">

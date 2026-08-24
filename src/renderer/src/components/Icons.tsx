@@ -211,3 +211,34 @@ export function MonitorOffIcon({ size = 20, className }: IconProps): React.JSX.E
     </svg>
   )
 }
+
+export function ExpandIcon({ size = 20, className }: IconProps): React.JSX.Element {
+  return (
+    <svg {...base(size, className)}>
+      <path d="M15 3h6v6" />
+      <path d="M9 21H3v-6" />
+      <line x1="21" y1="3" x2="14" y2="10" />
+      <line x1="3" y1="21" x2="10" y2="14" />
+    </svg>
+  )
+}
+
+export function ShrinkIcon({ size = 20, className }: IconProps): React.JSX.Element {
+  return (
+    <svg {...base(size, className)}>
+      <path d="M4 14h6v6" />
+      <path d="M20 10h-6V4" />
+      <line x1="14" y1="10" x2="21" y2="3" />
+      <line x1="3" y1="21" x2="10" y2="14" />
+    </svg>
+  )
+}
+
+export function PipIcon({ size = 20, className }: IconProps): React.JSX.Element {
+  return (
+    <svg {...base(size, className)}>
+      <rect x="2" y="4" width="20" height="16" rx="2" ry="2" />
+      <rect x="11" y="11" width="9" height="7" rx="1" ry="1" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}

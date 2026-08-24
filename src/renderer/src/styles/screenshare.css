@@ -141,7 +141,6 @@
 }
 
 .ss-stop-btn {
-  margin-left: auto;
   background: var(--red);
   color: #fff;
   border: none;
@@ -154,6 +153,33 @@
 
 .ss-stop-btn:hover {
   filter: brightness(1.1);
+}
+
+/* ferramentas de visualização (tela cheia + janela flutuante):
+   último item do cabeçalho, empurradas para a direita */
+.ss-stage-tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.ss-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.ss-icon-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.14);
 }
 
 .ss-stage-body {
@@ -244,4 +270,21 @@
 .voice-quick-action:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+/* ---------- Tela cheia ---------- */
+.ss-stage:fullscreen {
+  border-radius: 0;
+  background: #000;
+}
+
+.ss-stage:fullscreen .ss-video {
+  width: 100vw;
+  height: 100vh;
+  max-height: none;
+}
+
+/* janela flutuante (PiP) usa o vídeo puro — fundo escuro evita flash branco */
+video::-webkit-media-picture-in-picture-button {
+  display: none;
 }

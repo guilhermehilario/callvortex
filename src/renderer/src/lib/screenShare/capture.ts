@@ -26,8 +26,9 @@ export async function listScreenSources(): Promise<ScreenSourceInfo[]> {
  *   2. chama getDisplayMedia() — o handler do main entrega exatamente essa
  *      fonte. Esse é o único caminho que funciona em Wayland (portal/PipeWire)
  *      e também cobre X11 e Windows.
- * Restringe resolução/frame rate: conteúdo de tela não precisa de 60 fps —
- * 15 fps + 1080p economizam banda na malha P2P.
+ * Restringe resolução/frame rate e otimiza a codificação: 1080p com até
+ * ~24-30 fps + `contentHint = 'detail'` mantém o texto nítido sem estourar
+ * a banda na malha P2P (o teto real de bitrate é aplicado no sender).
  */
 export async function captureScreenSource(sourceId: string): Promise<MediaStream> {
   if (!sourceId || typeof sourceId !== 'string') {
@@ -41,7 +42,7 @@ export async function captureScreenSource(sourceId: string): Promise<MediaStream
     stream = await navigator.mediaDevices.getDisplayMedia({
       audio: false,
       video: {
-        frameRate: { max: 15, ideal: 15 },
+        frameRate: { max: 30, ideal: 24 },
         width: { max: 1920 },
         height: { max: 1080 }
       }
@@ -56,6 +57,14 @@ export async function captureScreenSource(sourceId: string): Promise<MediaStream
   if (stream.getVideoTracks().length === 0) {
     stream.getTracks().forEach((t) => t.stop())
     throw new Error('A captura não retornou nenhuma imagem.')
+  }
+  // conteúdo de tela: pede ao codificador que priorize nitidez (texto,
+  // bordas, áreas estáticas) em vez de suavizar como câmera comum
+  const track = stream.getVideoTracks()[0]
+  try {
+    track.contentHint = 'detail'
+  } catch {
+    // navegador sem suporte — segue com o padrão
   }
   return stream
 }

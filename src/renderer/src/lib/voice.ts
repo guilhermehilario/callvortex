@@ -931,11 +931,32 @@ export class VoiceManager {
     const offers: PeerOffer[] = []
     for (const [peerId, pc] of this.pcs) {
       pc.addTrack(track, stream)
+      await this.tuneScreenSender(pc, track)
       const offer = await pc.createOffer()
       await pc.setLocalDescription(offer)
       offers.push({ peerId, sdp: pc.localDescription as RTCSessionDescriptionInit })
     }
     return offers
+  }
+
+  /**
+   * Ajusta a codificação do vídeo de tela: sem isso o WebRTC começa com
+   * ~1 Mbps e degrada resolução (texto borrado). Aqui priorizamos
+   * resolução (degrada fps primeiro) com teto de 2,5 Mbps por par.
+   */
+  private async tuneScreenSender(pc: RTCPeerConnection, track: MediaStreamTrack): Promise<void> {
+    try {
+      const sender = pc.getSenders().find((s) => s.track === track)
+      if (!sender) return
+      const params = sender.getParameters()
+      if (!params.encodings || params.encodings.length === 0) params.encodings = [{}]
+      params.degradationPreference = 'maintain-resolution'
+      params.encodings[0].maxBitrate = 2_500_000
+      params.encodings[0].maxFramerate = 30
+      await sender.setParameters(params)
+    } catch {
+      // parâmetros recusados pelo navegador — segue com o padrão
+    }
   }
 
   /**
