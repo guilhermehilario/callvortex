@@ -245,6 +245,8 @@ export class VoiceManager {
   // pares que já receberam aviso de falha de conexão (evita toast repetido)
   private failedNotified = new Set<string>()
   private failedRetry = new Set<string>()
+  // membros do servidor do canal atual (null = lista indisponível, não filtra)
+  private allowedMembers: Set<string> | null = null
 
   onRoster: ((users: VoicePeerInfo[]) => void) | null = null
   onSpeaking: ((userId: string, speaking: boolean) => void) | null = null
@@ -342,12 +344,42 @@ export class VoiceManager {
     return this.localStream?.getAudioTracks()[0] ?? null
   }
 
+  /**
+   * Carrega os ids dos membros do servidor do canal. Com a lista em mãos,
+   * presenças e sinais de desconhecidos são ignorados (defesa contra
+   * injeção de presença no tópico do Realtime).
+   */
+  private async loadAllowedMembers(serverId?: string | null): Promise<void> {
+    this.allowedMembers = null
+    if (!serverId) return
+    try {
+      const { data, error } = await getSupabase()
+        .from('server_members')
+        .select('user_id')
+        .eq('server_id', serverId)
+      if (error) throw error
+      this.allowedMembers = new Set((data ?? []).map((r) => r.user_id as string))
+      vdbg('membros autorizados no servidor:', this.allowedMembers.size)
+    } catch (e) {
+      vdbg('não foi possível carregar membros do servidor:', e)
+    }
+  }
+
+  private isAllowed(userId: string): boolean {
+    return !this.allowedMembers || this.allowedMembers.has(userId)
+  }
+
   // ------------------------------------------------------------
   // Entrar / sair do canal
   // ------------------------------------------------------------
-  async join(channelId: string, me: Profile, preferredDeviceId?: string | null): Promise<void> {
+  async join(channelId: string, me: Profile, preferredDeviceId?: string | null, serverId?: string | null): Promise<void> {
     if (this.channelId === channelId) return
     await this.leave()
+
+    // lista de membros do servidor: base do filtro de admissão na malha.
+    // Se não carregar, allowedMembers fica null e NÃO filtramos (disponibilidade),
+    // mas tudo fica registrado; a proteção forte é o canal privado do Realtime.
+    await this.loadAllowedMembers(serverId)
 
     let stream: MediaStream
     try {
@@ -372,16 +404,22 @@ export class VoiceManager {
     await this.startProcessing()
 
     const supabase = getSupabase()
+    // canal privado: o Realtime só admite inscritos autorizados por RLS em
+    // realtime.messages (ver supabase/migrations/*_realtime_private_voice.sql).
+    // Ative no servidor PRIMEIRO e depois defina VITE_REALTIME_PRIVATE=1.
+    const usePrivate = import.meta.env.VITE_REALTIME_PRIVATE === '1'
     const ch = supabase.channel(`voice:${channelId}`, {
-      config: { presence: { key: me.id }, broadcast: { self: false } }
+      config: { presence: { key: me.id }, broadcast: { self: false }, private: usePrivate }
     })
     this.channel = ch
 
     const rosterFromState = (): VoicePeerInfo[] => {
       const state = ch.presenceState() as Record<string, { info: VoicePeerInfo }[]>
       const map = new Map<string, VoicePeerInfo>()
-      for (const arr of Object.values(state)) {
-        for (const p of arr) map.set(p.info.userId, p.info)
+      for (const [key, metas] of Object.entries(state)) {
+        if (this.allowedMembers && !this.allowedMembers.has(key)) continue
+        const info = metas[0]?.info
+        if (info) map.set(key, info)
       }
       return [...map.values()]
     }
@@ -395,7 +433,7 @@ export class VoiceManager {
     })
       .on('presence', { event: 'join' }, ({ key }) => {
         this.onRoster?.(rosterFromState())
-        if (key !== me.id && me.id < key) void this.connectTo(key)
+        if (key !== me.id && me.id < key && this.isAllowed(key)) void this.connectTo(key)
       })
       .on('presence', { event: 'leave' }, ({ key }) => {
         this.onRoster?.(rosterFromState())
@@ -404,6 +442,10 @@ export class VoiceManager {
       .on('broadcast', { event: 'signal' }, ({ payload }) => {
         const msg = payload as SignalMsg
         if (!msg || msg.to !== me.id) return
+        if (!this.isAllowed(msg.from)) {
+          vdbg('sinal ignorado de não-membro', msg.from.slice(0, 8))
+          return
+        }
         vdbg('sig ←', msg.type, 'de', msg.from.slice(0, 8))
         if (msg.type === 'offer' && msg.offer) {
           void this.handleOffer(msg.from, msg.offer)
@@ -474,6 +516,7 @@ export class VoiceManager {
     this.peerSignals.clear()
     this.failedNotified.clear()
     this.failedRetry.clear()
+    this.allowedMembers = null
     for (const userId of [...this.speaking]) this.setSpeaking(userId, false)
     this.onRoster?.([])
   }

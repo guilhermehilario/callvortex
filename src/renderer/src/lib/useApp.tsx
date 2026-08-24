@@ -251,7 +251,7 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
           if (!ch) throw new Error('canal de voz não existe mais')
           setChannels(chs)
           setScreen({ type: 'server', serverId: server.id, channelId: ch.id })
-          await voice.rejoin(ch.id, profile)
+          await voice.rejoin(ch.id, profile, saved.serverId)
         } catch {
           // não conseguiu voltar (canal excluído, sem permissão de microfone…) —
           // segue para o servidor normalmente

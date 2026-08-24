@@ -52,7 +52,7 @@ export interface VoiceApi {
   joinVoice: (channelId: string) => Promise<void>
   leaveVoice: () => Promise<void>
   /** volta automática para a sala (rejoin) — aplica as configurações atuais */
-  rejoin: (channelId: string, me: Profile) => Promise<void>
+  rejoin: (channelId: string, me: Profile, serverId?: string | null) => Promise<void>
   /** limpa o estado de voz sem som nem sessão (ex.: saiu da conta) */
   reset: () => void
   /** canal em que eu estava foi excluído — sai da sala silenciosamente */
@@ -211,7 +211,7 @@ export function useVoice({ profile, activeServerId, notify }: UseVoiceDeps): Voi
       if (voiceManagerRef.current?.joinedChannelId === channelId) return
       const serverId = activeServerId
       try {
-        await voiceManagerRef.current!.join(channelId, me, selectedMicId)
+        await voiceManagerRef.current!.join(channelId, me, selectedMicId, activeServerId)
         voiceManagerRef.current!.setMicVolume(micVolume)
         if (selectedOutputId) void voiceManagerRef.current!.setOutputDevice(selectedOutputId)
         voiceManagerRef.current!.setOutputVolume(outputVolume)
@@ -242,8 +242,8 @@ export function useVoice({ profile, activeServerId, notify }: UseVoiceDeps): Voi
   }, [])
 
   const rejoin = useCallback(
-    async (channelId: string, me: Profile) => {
-      await voiceManagerRef.current!.join(channelId, me, selectedMicId)
+    async (channelId: string, me: Profile, serverId?: string | null) => {
+      await voiceManagerRef.current!.join(channelId, me, selectedMicId, serverId)
       voiceManagerRef.current!.setMicVolume(micVolume)
       if (selectedOutputId) void voiceManagerRef.current!.setOutputDevice(selectedOutputId)
       voiceManagerRef.current!.setOutputVolume(outputVolume)
