@@ -244,6 +244,7 @@ export class VoiceManager {
   private screenStream: MediaStream | null = null
   // pares que já receberam aviso de falha de conexão (evita toast repetido)
   private failedNotified = new Set<string>()
+  private failedRetry = new Set<string>()
 
   onRoster: ((users: VoicePeerInfo[]) => void) | null = null
   onSpeaking: ((userId: string, speaking: boolean) => void) | null = null
@@ -312,9 +313,33 @@ export class VoiceManager {
     return [...this.pcs.entries()]
   }
 
+  /** Diagnóstico (dev): despeja o par ICE escolhido/tentado e os candidatos. */
+  private async logPairStats(peerId: string, pc: RTCPeerConnection): Promise<void> {
+    try {
+      const rep = await pc.getStats()
+      let pair = ''
+      const cands: string[] = []
+      rep.forEach((st) => {
+        if (st.type === 'candidate-pair' && (st.state === 'failed' || st.state === 'in-progress' || st.selected || st.nominated)) {
+          pair = `pair[${st.state}${st.selected ? '/sel' : ''}] local=${st.localCandidateId} remoto=${st.remoteCandidateId}`
+        }
+        if (st.type === 'local-candidate') cands.push(`L:${st.candidateType}/${st.ip ?? st.address ?? '?'}`)
+        if (st.type === 'remote-candidate') cands.push(`R:${st.candidateType}/${st.address ?? '?'}`)
+      })
+      vdbg('ice', peerId.slice(0, 8), pair || 'sem par', '|', [...new Set(cands)].join(' '))
+    } catch {
+      vdbg('ice', peerId.slice(0, 8), 'stats indisponíveis')
+    }
+  }
+
   /** Diagnóstico (dev): a trilha exata que está sendo enviada aos pares. */
   debugSendTrack(): MediaStreamTrack | null {
     return this.getSendTrack()
+  }
+
+  /** Diagnóstico (dev): a trilha bruta capturada do microfone, pré-processamento. */
+  debugRawTrack(): MediaStreamTrack | null {
+    return this.localStream?.getAudioTracks()[0] ?? null
   }
 
   // ------------------------------------------------------------
@@ -379,6 +404,7 @@ export class VoiceManager {
       .on('broadcast', { event: 'signal' }, ({ payload }) => {
         const msg = payload as SignalMsg
         if (!msg || msg.to !== me.id) return
+        vdbg('sig ←', msg.type, 'de', msg.from.slice(0, 8))
         if (msg.type === 'offer' && msg.offer) {
           void this.handleOffer(msg.from, msg.offer)
         } else if (msg.type === 'answer' && msg.answer) {
@@ -447,6 +473,7 @@ export class VoiceManager {
     this.stopStatsPolling()
     this.peerSignals.clear()
     this.failedNotified.clear()
+    this.failedRetry.clear()
     for (const userId of [...this.speaking]) this.setSpeaking(userId, false)
     this.onRoster?.([])
   }
@@ -688,22 +715,35 @@ export class VoiceManager {
       }
     }
 
-    pc.onconnectionstatechange = () => {
-      const st = pc.connectionState
-      vdbg('pc', peerId.slice(0, 8), '→', st)
-      this.onPeerConnectionState?.(peerId, st)
-      if (st === 'failed') {
-        // uma vez por par: a mídia não vai fluir — avisa o usuário
-        if (!this.failedNotified.has(peerId)) {
-          this.failedNotified.add(peerId)
-          this.onError?.('Não foi possível conectar a um participante (rede bloqueada ou TURN indisponível).')
+      pc.onconnectionstatechange = () => {
+        const st = pc.connectionState
+        vdbg('pc', peerId.slice(0, 8), '→', st)
+        this.onPeerConnectionState?.(peerId, st)
+        if (st === 'disconnected' || st === 'failed') {
+          void this.logPairStats(peerId, pc)
+        }
+        if (st === 'failed') {
+          // primeira falha: tenta reconectar automaticamente (pode ser soluço
+          // de renegociação ou rede instável) — só avisa se persistir
+          const firstAttempt = !this.failedRetry.has(peerId)
+          this.failedRetry.add(peerId)
+          this.closePeer(peerId)
+          if (firstAttempt) {
+            vdbg('par', peerId.slice(0, 8), 'falhou — reconectando automaticamente')
+            window.setTimeout(() => {
+              if (this.channelId && !this.pcs.has(peerId)) void this.connectTo(peerId)
+            }, 1500)
+          } else if (!this.failedNotified.has(peerId)) {
+            this.failedNotified.add(peerId)
+            this.onError?.('Não foi possível conectar a um participante (rede bloqueada ou TURN indisponível).')
+          }
+          return
+        }
+        // 'disconnected' pode ser só um soluço da rede; só encerra em falha de fato
+        if (st === 'closed') {
+          this.closePeer(peerId)
         }
       }
-      // 'disconnected' pode ser só um soluço da rede; só encerra em falha de fato
-      if (st === 'failed' || st === 'closed') {
-        this.closePeer(peerId)
-      }
-    }
 
     const track = this.getSendTrack()
     if (track && this.localStream) pc.addTrack(track, this.localStream)
