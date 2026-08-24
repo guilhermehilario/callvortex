@@ -11,6 +11,11 @@ export interface ScreenSourceInfo {
   icon: string | null
 }
 
+export interface FirewallFixResult {
+  ok: boolean
+  message: string
+}
+
 export interface Api {
   platform: string
   saveCredentials: (creds: SavedCredentials) => Promise<boolean>
@@ -20,6 +25,10 @@ export interface Api {
     getSources: () => Promise<ScreenSourceInfo[]>
     /** registra a fonte escolhida no picker; o getDisplayMedia() usará ela */
     selectSource: (sourceId: string) => Promise<boolean>
+  }
+  voice: {
+    /** libera o áudio no Firewall do Windows (abre confirmação UAC) */
+    fixFirewall: () => Promise<FirewallFixResult>
   }
 }
 

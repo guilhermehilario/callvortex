@@ -32,13 +32,22 @@ function vdbg(...args: unknown[]): void {
   if (import.meta.env.DEV) console.debug('[voice]', ...args)
 }
 
+// Relay TURN self-hosted (coturn na máquina do criador, rede local):
+// garante áudio mesmo quando o firewall/NAT bloqueia a conexão direta —
+// o cliente envia para o relay como conexão de SAÍDA, que firewall nenhum
+// bloqueia por padrão. Sobrescreva em .env (VITE_TURN_URLS/VITE_TURN_USER/
+// VITE_TURN_PASS) ao apontar para outro servidor.
+const TURN_URLS = (import.meta.env.VITE_TURN_URLS as string | undefined) ?? 'turn:192.168.18.130:3478?transport=udp,turn:192.168.18.130:3478?transport=tcp'
 const ICE_SERVERS: RTCIceServer[] = [
   { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
-  { urls: 'stun:stun.cloudflare.com:3478' }
+  { urls: 'stun:stun.cloudflare.com:3478' },
+  {
+    urls: TURN_URLS.split(','),
+    username: (import.meta.env.VITE_TURN_USER as string | undefined) ?? 'cvturn',
+    credential: (import.meta.env.VITE_TURN_PASS as string | undefined) ?? 'cvpass2026'
+  }
   // NOTA: o TURN público OpenRelay foi removido — seu DNS não resolve mais
   // (verificado em 23/08/2026) e cada tentativa atrasava o ICE gathering.
-  // Para voz entre redes com NAT restrito, provisione um TURN próprio
-  // (ex.: coturn self-hosted ou Cloudflare Calls TURN) e adicione aqui.
 ]
 
 /**

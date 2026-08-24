@@ -825,3 +825,12 @@ grant select on table public.screen_shares to authenticated;
 revoke all on table public.call_signals from anon;
 revoke all on table public.call_signals from authenticated;
 grant select, insert, delete on table public.call_signals to authenticated;
+
+-- ------------------------------------------------------------
+-- Realtime: canais privados da voz ("voice:<channel_id>")
+-- Só membros do servidor do canal podem assinar o tópico.
+-- Implementado em supabase/migrations/20260824000000_realtime_private_voice.sql
+-- (portável entre versões do Realtime: detecta coluna channel_name/topic).
+-- Requer "Allow private channels" ligado no painel; no cliente,
+-- defina VITE_REALTIME_PRIVATE=1 depois de ativar no servidor.
+-- ------------------------------------------------------------

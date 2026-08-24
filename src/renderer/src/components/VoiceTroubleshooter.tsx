@@ -33,6 +33,7 @@ export default function VoiceTroubleshooter({ onClose }: { onClose: () => void }
   const [results, setResults] = useState<CheckResult[]>(INITIAL)
   const [running, setRunning] = useState(false)
   const [toneVerdict, setToneVerdict] = useState<'ok' | 'fail' | null>(null)
+  const [fw, setFw] = useState<{ state: 'idle' | 'run' | 'ok' | 'fail'; msg: string }>({ state: 'idle', msg: '' })
   const rafRef = useRef<number | null>(null)
 
   const patch = useCallback((id: string, data: Partial<CheckResult>) => {
@@ -42,6 +43,19 @@ export default function VoiceTroubleshooter({ onClose }: { onClose: () => void }
   const voice = (): VoiceDebugApi | null => {
     const v = (window as unknown as { __voice?: VoiceDebugApi }).__voice
     return v ?? null
+  }
+
+  // Correção automática do Firewall do Windows: abre a confirmação do
+  // sistema (UAC) e libera o áudio do CallVortex com regras in+out.
+  const fixFirewall = async (): Promise<void> => {
+    setFw({ state: 'run', msg: 'Confirme a janela do Windows que apareceu (Controle de Conta de Usuário).' })
+    try {
+      const res = await window.api.voice.fixFirewall()
+      setFw({ state: res.ok ? 'ok' : 'fail', msg: res.message })
+      if (res.ok) patch('p2p', { status: 'warn', detail: 'Firewall liberado — saia da sala e entre de novo para reconectar.' })
+    } catch {
+      setFw({ state: 'fail', msg: 'Não foi possível executar a correção. Libere o app manualmente no painel do Firewall.' })
+    }
   }
 
   const runAll = useCallback(async () => {
@@ -225,6 +239,23 @@ export default function VoiceTroubleshooter({ onClose }: { onClose: () => void }
               </li>
             ))}
           </ul>
+
+          {results.find((r) => r.id === 'p2p')?.status === 'fail' && navigator.userAgent.includes('Windows') && (
+            <div className="vts-fwfix">
+              {fw.state === 'idle' ? (
+                <>
+                  <span className="vts-hint">No Windows, o firewall costuma ser a causa. Posso liberar o CallVortex agora — o sistema pedirá sua confirmação.</span>
+                  <button className="btn-primary" onClick={() => void fixFirewall()}>
+                    Corrigir automaticamente
+                  </button>
+                </>
+              ) : fw.state === 'run' ? (
+                <span className="vts-hint">{fw.msg}</span>
+              ) : (
+                <span className={`vts-hint ${fw.state}`}>{fw.msg}</span>
+              )}
+            </div>
+          )}
 
           <div className="vts-tone">
             <button className="btn-secondary" disabled={running} onClick={() => void playTone()}>

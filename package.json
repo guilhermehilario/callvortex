@@ -1,6 +1,6 @@
 {
   "name": "callvortex",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Chat por texto e voz para conversar com amigos",
   "main": "out/main/index.js",
   "scripts": {
@@ -48,8 +48,14 @@
     "win": {
       "icon": "build/icon.png",
       "target": [
-        "portable"
+        "portable",
+        "nsis"
       ]
+    },
+    "nsis": {
+      "include": "build/installer.nsh",
+      "oneClick": true,
+      "allowToChangeInstallationDirectory": false
     },
     "linux": {
       "icon": "build/icon.png",
