@@ -18,6 +18,7 @@ Nessa tela estão as **duas coisas** que você precisa:
 |---|---|---|
 | **Project URL** | No topo da página. Ex.: `https://abcdefghijklm.supabase.co` | `VITE_SUPABASE_URL` |
 | **Publishable key** ou **anon key** | Aba **"Publishable and secret API keys"** → seção **Publishable key** (`sb_publishable_...`). Se não aparecer, abra a aba **"Legacy API Keys"** e copie a **anon key** (`eyJhbGciOi...`) | `VITE_SUPABASE_ANON_KEY` |
+| `VITE_REALTIME_PRIVATE` | `1` só após aplicar a migração `20260824000000_realtime_private_voice.sql` e ligar "Allow private channels" no painel. Deixe `0` (ou omita) até lá | Opcional (padrão: `0`) |
 
 > ⚠️ Use sempre a **publishable** ou a **anon** key — **nunca** a *secret key*
 > nem a *service_role key* (elas dão acesso total ao banco e não devem sair do painel).
@@ -40,10 +41,10 @@ VITE_SUPABASE_ANON_KEY=sua-chave-copiada-aqui
 ```
 
 - O `.env` **não vai para o git** (está no `.gitignore`).
-- Em desenvolvimento (`npm run dev`), o app lê esse arquivo a cada execução.
+- Em desenvolvimento (`yarn dev`), o app lê esse arquivo a cada execução.
 - **Se você usa o instalador `.exe`** (da pasta `release/`), as chaves ficam
   gravadas dentro do executável no momento do build. Nesse caso, depois de
-  corrigir o `.env`, rode `npm run dist` de novo para gerar um `.exe` novo.
+  corrigir o `.env`, rode `yarn dist` de novo para gerar um `.exe` novo.
 
 > 🔎 Uma chave **anon/publishable real** tem ~200 caracteres ou mais (formato
 > `eyJ...` ou `sb_publishable_...`). Se a sua chave tem 48 caracteres ou a URL
@@ -71,14 +72,14 @@ Com o `.env` preenchido, rode os SQLs no painel do Supabase:
 ## 4. Rodando o app
 
 ```bash
-npm install      # só na primeira vez
-npm run dev      # abre o app em modo desenvolvimento
+yarn install      # só na primeira vez
+yarn dev      # abre o app em modo desenvolvimento
 ```
 
 Para gerar o instalador para os amigos:
 
 ```bash
-npm run dist     # gera o .exe na pasta release/
+yarn dist     # gera o .exe na pasta release/
 ```
 
 ---

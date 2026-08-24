@@ -48,14 +48,8 @@
     "win": {
       "icon": "build/icon.png",
       "target": [
-        "portable",
-        "nsis"
+        "portable"
       ]
-    },
-    "nsis": {
-      "include": "build/installer.nsh",
-      "oneClick": true,
-      "allowToChangeInstallationDirectory": false
     },
     "linux": {
       "icon": "build/icon.png",
