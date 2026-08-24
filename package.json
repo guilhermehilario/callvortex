@@ -1,6 +1,6 @@
 {
   "name": "callvortex",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Chat por texto e voz para conversar com amigos",
   "main": "out/main/index.js",
   "scripts": {
