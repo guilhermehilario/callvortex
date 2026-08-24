@@ -36,6 +36,9 @@ export interface VoicePeerInfo {
   username: string
   avatar_color: string
   avatar_url?: string | null
+  /** estado transmitido na presença — visível só a quem está na sala */
+  muted?: boolean
+  deafened?: boolean
 }
 
 export interface Message {

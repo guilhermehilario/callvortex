@@ -254,6 +254,13 @@ export class VoiceManager {
   onPeerSignal: ((userId: string, quality: number) => void) | null = null
   /** stream de tela de um par (null quando encerrou ou desconectou) */
   onRemoteScreen: ((peerId: string, stream: MediaStream | null) => void) | null = null
+  /**
+   * Disparado quando respondi uma conexão sem vídeo mas estou
+   * compartilhando a tela: o par entrou depois do início do
+   * compartilhamento e me ofereceu apenas áudio (resposta não pode
+   * criar m-line de vídeo) — o ScreenShareManager precisa renegociar.
+   */
+  onScreenRenegotiationNeeded: ((peerId: string) => void) | null = null
   /** estado da conexão com cada par (para indicar conectando/reconectando) */
   onPeerConnectionState: ((peerId: string, state: RTCPeerConnectionState) => void) | null = null
   onError: ((message: string) => void) | null = null
@@ -458,7 +465,7 @@ export class VoiceManager {
 
     void ch.subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
-        await ch.track({ info: { userId: me.id, username: me.username, avatar_color: me.avatar_color, avatar_url: me.avatar_url ?? null } })
+        await ch.track({ info: this.presenceInfo() })
         // registra a atividade da sala no banco (início do relógio da sala)
         void getSupabase().rpc('ensure_voice_session', { target_channel: channelId }).then(() => undefined, () => undefined)
       }
@@ -643,6 +650,29 @@ export class VoiceManager {
     this.processedStream?.getAudioTracks().forEach((t) => {
       t.enabled = enabled
     })
+    // publica o estado (mute/surdo) para os demais participantes da sala
+    this.syncPresence()
+  }
+
+  /** Informação transmitida na presença: perfil + estado de áudio. */
+  private presenceInfo(): VoicePeerInfo {
+    const me = this.me
+    if (!me) throw new Error('Sem perfil para presença.')
+    return {
+      userId: me.id,
+      username: me.username,
+      avatar_color: me.avatar_color,
+      avatar_url: me.avatar_url ?? null,
+      muted: this.localMuted,
+      deafened: this.deafened
+    }
+  }
+
+  /** Reenvia a presença com o estado atual (sem efeito fora da sala). */
+  private syncPresence(): void {
+    const ch = this.channel
+    if (!ch || !this.me) return
+    void ch.track({ info: this.presenceInfo() })
   }
 
   // ------------------------------------------------------------
@@ -824,9 +854,39 @@ export class VoiceManager {
       const queued = this.pendingIce.get(peerId) ?? []
       this.pendingIce.delete(peerId)
       for (const c of queued) void pc.addIceCandidate(c).catch(() => undefined)
+      // o par ofereceu só áudio, mas tenho vídeo publicado: a resposta não
+      // pode inventar m-line — peço renegociação ao ScreenShareManager
+      if (
+        this.screenStream &&
+        !pc.getSenders().some((s) => s.track?.kind === 'video')
+      ) {
+        vdbg('par entrou sem vídeo durante compartilhamento — renegociando', peerId.slice(0, 8))
+        window.setTimeout(() => this.onScreenRenegotiationNeeded?.(peerId), 300)
+      }
     } catch {
       this.closePeer(peerId)
     }
+  }
+
+  /**
+   * Oferta de renegociação direcionada a UM par: adiciona a trilha de tela
+   * ao PC existente (se ainda não estiver lá) e gera a oferta. Usada quando
+   * um participante conecta depois do início do compartilhamento.
+   */
+  async screenOfferFor(peerId: string): Promise<RTCSessionDescriptionInit | null> {
+    const pc = this.pcs.get(peerId)
+    const track = this.screenStream?.getVideoTracks()[0]
+    if (!pc || !track || pc.connectionState === 'closed') return null
+    if (pc.getSenders().some((s) => s.track === track)) return null // já negociado
+    pc.addTrack(track, this.screenStream!)
+    const offer = await pc.createOffer()
+    await pc.setLocalDescription(offer)
+    return pc.localDescription as RTCSessionDescriptionInit
+  }
+
+  /** [diagnóstico] publica trilha de vídeo de teste sem passar pela captura. */
+  debugPublishFakeScreen(stream: MediaStream): void {
+    this.screenStream = stream
   }
 
   private async handleAnswer(peerId: string, answer: RTCSessionDescriptionInit): Promise<void> {

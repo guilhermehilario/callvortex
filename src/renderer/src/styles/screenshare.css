@@ -288,3 +288,13 @@
 video::-webkit-media-picture-in-picture-button {
   display: none;
 }
+
+/* Na tela da chamada de voz, o compartilhamento é a área principal:
+   ganha o máximo de altura sem esmagar a faixa de participantes */
+.app-main:has(.voice-screen) > .ss-stage {
+  margin: 12px;
+}
+
+.app-main:has(.voice-screen) .ss-video {
+  max-height: calc(100vh - 300px);
+}

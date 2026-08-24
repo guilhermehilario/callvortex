@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useApp } from '../lib/useApp'
 import { getNoiseSuppressorModuleUrl } from '../lib/voice'
 import { ChevronDownIcon, RefreshIcon } from './Icons'
+import VoiceTroubleshooter from './VoiceTroubleshooter'
 
 const LEVEL_BARS = 16
 const LEVEL_HEIGHTS = [25, 35, 45, 55, 65, 75, 85, 95, 95, 85, 75, 65, 55, 45, 35, 25]
@@ -27,6 +28,7 @@ export default function MicPicker(): React.JSX.Element {
   } = useApp()
 
   const [testing, setTesting] = useState(false)
+  const [showTroubleshooter, setShowTroubleshooter] = useState(false)
   const [testLevel, setTestLevel] = useState(0)
   const [testError, setTestError] = useState<string | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
@@ -191,6 +193,14 @@ export default function MicPicker(): React.JSX.Element {
 
       {testing && <div className="mic-test-hint">Você está ouvindo seu microfone (retorno com 0,5 s de atraso para evitar microfonia) — fale para conferir.</div>}
       {testError && <div className="mic-test-error">{testError}</div>}
+
+      <div className="mic-picker-row">
+        <button className="mic-picker-troubleshoot" onClick={() => setShowTroubleshooter(true)}>
+          Não ouve ou não é ouvido? Solucionar problemas
+        </button>
+      </div>
+
+      {showTroubleshooter && <VoiceTroubleshooter onClose={() => setShowTroubleshooter(false)} />}
     </div>
   )
 }

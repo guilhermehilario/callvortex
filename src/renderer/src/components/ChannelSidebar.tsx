@@ -3,7 +3,7 @@ import { uploadAvatar } from '../lib/api'
 import type { Channel } from '../lib/types'
 import { useApp } from '../lib/useApp'
 import Avatar from './Avatar'
-import { ActivitiesIcon, BroadcastIcon, ChevronDownIcon, GearIcon, HeadphonesIcon, HeadphonesOffIcon, MicIcon, MicOffIcon, PencilIcon, PhoneOffIcon, PowerIcon, RouterIcon, VideoIcon } from './Icons'
+import { ActivitiesIcon, BroadcastIcon, ChevronDownIcon, GearIcon, HeadphonesIcon, HeadphonesOffIcon, MicIcon, MicOffIcon, MonitorIcon, PencilIcon, PhoneOffIcon, PowerIcon, RouterIcon, VideoIcon } from './Icons'
 import MicPicker from './MicPicker'
 import OutputPicker from './OutputPicker'
 import ScreenShareButton from './ScreenShareButton'
@@ -36,6 +36,7 @@ export default function ChannelSidebar(): React.JSX.Element {
     voiceSessions,
     speakingUsers,
     peerSignals,
+    screenShareState,
     selectChannel,
     selectDm,
     openModal,
@@ -224,6 +225,23 @@ export default function ChannelSidebar(): React.JSX.Element {
                     )}
                   </span>
                   <span className="voice-channel-member-name">{u.username}</span>
+                  <span className="voice-channel-member-flags">
+                    {screenShareState.sharerId === u.userId && (
+                      <span className="vflag vflag-sharing" title="Compartilhando a tela">
+                        <MonitorIcon size={12} />
+                      </span>
+                    )}
+                    {u.muted && (
+                      <span className="vflag" title="Microfone silenciado">
+                        <MicOffIcon size={12} />
+                      </span>
+                    )}
+                    {u.deafened && (
+                      <span className="vflag" title="Sem som (surdo)">
+                        <HeadphonesOffIcon size={12} />
+                      </span>
+                    )}
+                  </span>
                 </div>
               ))}
               {presence.length > 5 && (

@@ -1,21 +1,16 @@
 import { useEffect, useState } from 'react'
 import type { Channel } from '../lib/types'
 import { useApp } from '../lib/useApp'
-import Avatar from './Avatar'
 import {
-  ChevronDownIcon,
   HeadphonesIcon,
   HeadphonesOffIcon,
   MicIcon,
   MicOffIcon,
   PhoneOffIcon,
-  VolumeHighIcon,
-  VolumeMuteIcon
+  VolumeHighIcon
 } from './Icons'
-import MicPicker from './MicPicker'
 import ScreenShareButton from './ScreenShareButton'
-import { ScreenSharingDot } from './ScreenShareStage'
-import SignalBars from './SignalBars'
+import VoiceParticipantTiles from './VoiceParticipantTiles'
 
 function formatActivity(startedAtIso: string, nowMs: number): string | null {
   const ms = nowMs - new Date(startedAtIso).getTime()
@@ -30,25 +25,19 @@ function formatActivity(startedAtIso: string, nowMs: number): string | null {
 }
 
 /**
- * Sala do canal de voz — layout de chamada estilo Discord:
- * grade de "tiles" (um por participante, anel verde quando fala),
- * dock de controles flutuante na base e popover de microfone.
+ * Sala do canal de voz — layout de chamada: a área central fica livre
+ * para vídeo/compartilhamento; na faixa inferior ficam os cards dos
+ * participantes e, logo abaixo, o dock de controles da chamada.
+ * Configurações de microfone vivem apenas na barra lateral.
  */
 export default function VoiceChannelScreen({ channel }: { channel: Channel }): React.JSX.Element {
   const {
-    profile,
     voiceChannelId,
     voiceRoster,
     voicePresence,
     voiceSessions,
     voiceMuted,
     voiceDeafened,
-    micVolume,
-    outputVolume,
-    speakingUsers,
-    peerVolumes,
-    setPeerVolume,
-    peerSignals,
     joinVoice,
     leaveVoice,
     toggleVoiceMute,
@@ -60,15 +49,10 @@ export default function VoiceChannelScreen({ channel }: { channel: Channel }): R
   const members = joined ? voiceRoster : (voicePresence[channel.id] ?? [])
   const startedAt = voiceSessions[channel.id]
   const [now, setNow] = useState(Date.now())
-  const [pickerOpen, setPickerOpen] = useState(false)
   useEffect(() => {
     const iv = setInterval(() => setNow(Date.now()), 1_000)
     return () => clearInterval(iv)
   }, [])
-  // saiu da sala: fecha o popover junto
-  useEffect(() => {
-    if (!joined) setPickerOpen(false)
-  }, [joined])
   const activity = startedAt && members.length > 0 ? formatActivity(startedAt, now) : null
 
   return (
@@ -121,92 +105,17 @@ export default function VoiceChannelScreen({ channel }: { channel: Channel }): R
           </div>
         )}
 
-        {members.length > 0 && (
-          <div className="voice-tiles">
-            {members.map((m) => {
-              const isMe = m.userId === profile?.id
-              const speaking = joined && speakingUsers.has(m.userId)
-              const vol = Math.round((peerVolumes[m.userId] ?? 1) * 100)
-              return (
-                <div key={m.userId} className={`voice-tile ${speaking ? 'speaking' : ''}`}>
-                  <div className="voice-tile-top">
-                    <ScreenSharingDot userId={m.userId} />
-                    {joined && !isMe && (
-                      <span className="voice-tile-signal">
-                        <SignalBars quality={peerSignals[m.userId] ?? 0} />
-                      </span>
-                    )}
-                  </div>
-
-                  <span className={`voice-tile-avatar ${speaking ? 'speaking' : ''}`}>
-                    <Avatar name={m.username} color={m.avatar_color} size={72} url={m.avatar_url} />
-                  </span>
-                  <span className="voice-tile-name" title={m.username}>
-                    {m.username}
-                    {isMe && <span className="voice-tile-you">(você)</span>}
-                  </span>
-
-                  {joined && isMe && (voiceMuted || voiceDeafened || micVolume === 0 || outputVolume === 0) && (
-                    <div className="voice-tile-badges">
-                      {(voiceMuted || micVolume === 0) && (
-                        <span
-                          className={`voice-tile-badge ${voiceMuted ? 'red' : 'amber'}`}
-                          title={voiceMuted ? 'Microfone silenciado' : 'Volume do microfone em 0% — ninguém consegue ouvir você'}
-                        >
-                          <MicOffIcon size={13} />
-                        </span>
-                      )}
-                      {(voiceDeafened || outputVolume === 0) && (
-                        <span
-                          className={`voice-tile-badge ${voiceDeafened ? 'red' : 'amber'}`}
-                          title={voiceDeafened ? 'Sem som' : 'Volume de saída em 0% — você não ouve os participantes'}
-                        >
-                          <HeadphonesOffIcon size={13} />
-                        </span>
-                      )}
-                    </div>
-                  )}
-
-                  {joined && !isMe && (
-                    <div className="voice-tile-volume" title={`Volume de ${m.username}`}>
-                      <span className="voice-tile-vol-icon">{vol === 0 ? <VolumeMuteIcon size={13} /> : <VolumeHighIcon size={13} />}</span>
-                      <input
-                        type="range"
-                        min={0}
-                        max={100}
-                        value={vol}
-                        onChange={(e) => setPeerVolume(m.userId, Number(e.target.value) / 100)}
-                        style={{ '--fill': `${vol}%` } as React.CSSProperties}
-                        aria-label={`Volume de ${m.username}`}
-                      />
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        )}
+        {/* faixa inferior compacta: cards empurrados para o rodapé */}
+        {joined && <VoiceParticipantTiles members={members} joined={joined} />}
 
         {joined && (
           <div className="voice-controls-dock">
-            {pickerOpen && (
-              <div className="voice-dock-picker">
-                <MicPicker />
-              </div>
-            )}
             <button
               className={`voice-control ${voiceMuted ? 'active' : ''}`}
               title={voiceMuted ? 'Ativar microfone' : 'Silenciar microfone'}
               onClick={toggleVoiceMute}
             >
               {voiceMuted ? <MicOffIcon size={20} /> : <MicIcon size={20} />}
-            </button>
-            <button
-              className={`voice-control settings ${pickerOpen ? 'open' : ''}`}
-              title={pickerOpen ? 'Fechar configurações de voz' : 'Configurações de voz (microfone, volume, ruído)'}
-              onClick={() => setPickerOpen((v) => !v)}
-            >
-              <ChevronDownIcon size={16} />
             </button>
             <button
               className={`voice-control ${voiceDeafened ? 'active' : ''}`}

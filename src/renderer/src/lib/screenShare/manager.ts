@@ -46,6 +46,12 @@ export class ScreenShareManager {
   /** guarda o clique: se 'starting' não evoluir, reseta com aviso */
   private startGuard: number | null = null
   private destroyed = false
+  /**
+   * Vídeo que chegou antes da confirmação oficial de quem compartilha
+   * (ontrack pode vencer a sinalização): guardado por par e aplicado quando
+   * o sharerId bater — garante que a tela SEMPRE aparece para todos.
+   */
+  private pendingRemoteScreens = new Map<string, MediaStream>()
 
   onChange: ((state: ScreenShareState) => void) | null = null
 
@@ -56,12 +62,28 @@ export class ScreenShareManager {
     this.voice = voice
     voice.onRemoteScreen = (peerId, stream) => {
       if (this.state.status === 'sharing' && this.state.localStream) return // sou eu quem compartilha
-      if (stream !== null && this.state.sharerId !== peerId) return // stream inesperado — ignora
+      if (stream === null) {
+        const wasSharer = this.state.sharerId === peerId
+        this.pendingRemoteScreens.delete(peerId)
+        if (wasSharer) this.patch({ remoteStream: null })
+        return
+      }
+      if (this.state.sharerId && this.state.sharerId !== peerId) {
+        // vídeo de quem não é o compartilhador oficial — guarda: pode ser o
+        // stream chegando antes da confirmação de quem compartilha
+        this.pendingRemoteScreens.set(peerId, stream)
+        return
+      }
       this.patch({ remoteStream: stream })
     }
     voice.onPeerConnectionState = (peerId, connectionState) => {
       const relevant = this.state.sharerId === peerId || (this.state.status === 'sharing' && !!this.state.localStream)
       if (relevant) this.patch({ connectionState })
+    }
+    // participante conectou depois do início do compartilhamento com uma
+    // oferta só de áudio — envia renegociação com o vídeo para ele
+    voice.onScreenRenegotiationNeeded = (peerId) => {
+      void this.renegotiateScreenTo(peerId)
     }
     this.signaling.onSignal = (signal) => void this.handleSignal(signal)
     this.signaling.onSharerChange = (sharerId) => {
@@ -70,6 +92,12 @@ export class ScreenShareManager {
         // outro participante começou a compartilhar
         if (this.state.status === 'sharing') return // conflito já bloqueado pelo banco
         this.patch({ sharerId })
+        // se o vídeo já havia chegado antes da confirmação, aplica agora
+        const pending = this.pendingRemoteScreens.get(sharerId)
+        if (pending) {
+          this.pendingRemoteScreens.delete(sharerId)
+          this.patch({ remoteStream: pending })
+        }
       } else if (!sharerId) {
         this.handleRemoteStopped()
       }
@@ -77,7 +105,26 @@ export class ScreenShareManager {
   }
 
   detach(): void {
+    if (this.voice) this.voice.onScreenRenegotiationNeeded = null
     this.voice = null
+  }
+
+  /**
+   * Renegociação de tela para um par específico que entrou durante o
+   * compartilhamento (oferta dele não tinha vídeo). Melhor esforço:
+   * qualquer falha apenas mantém o par sem vídeo, como antes.
+   */
+  private async renegotiateScreenTo(peerId: string): Promise<void> {
+    const voice = this.voice
+    if (!voice || !this.channelId) return
+    if (this.state.status !== 'sharing' || !this.state.localStream) return
+    try {
+      const desc = await voice.screenOfferFor(peerId)
+      if (!desc) return
+      await this.signaling.sendSignal(this.channelId, peerId, 'screen-offer', { sdp: desc })
+    } catch {
+      // par pode ter saído no meio do processo — ignora
+    }
   }
 
   destroy(): void {
@@ -85,6 +132,7 @@ export class ScreenShareManager {
     ++this.opToken
     this.stopHeartbeat()
     this.clearEndedHandler()
+    this.pendingRemoteScreens.clear()
     this.signaling.destroy()
     this.state = INITIAL_SCREEN_SHARE_STATE
     this.onChange = null
@@ -374,6 +422,7 @@ export class ScreenShareManager {
   }
 
   private handleRemoteStopped(): void {
+    this.pendingRemoteScreens.clear()
     if (this.state.status === 'sharing' && this.state.localStream) return // era meu? nada a fazer
     this.patch({ sharerId: null, remoteStream: null, connectionState: null })
   }

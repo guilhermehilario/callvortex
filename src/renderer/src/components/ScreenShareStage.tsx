@@ -15,6 +15,10 @@ export default function ScreenShareStage({ members }: { members: VoicePeerInfo[]
   const videoRef = useRef<HTMLVideoElement>(null)
   const stageRef = useRef<HTMLDivElement>(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  // trilha de vídeo realmente transmitindo? (ao encerrar, o WebRTC apenas
+  // "muta" a trilha remota e o <video> congela no último frame — detectamos
+  // isso para limpar a imagem e avisar o usuário)
+  const [trackLive, setTrackLive] = useState(false)
   const [pipSupported] = useState(
     () => typeof document !== 'undefined' && document.pictureInPictureEnabled === true
   )
@@ -31,6 +35,27 @@ export default function ScreenShareStage({ members }: { members: VoicePeerInfo[]
     }
     if (stream) {
       void el.play().catch(() => undefined)
+    }
+  }, [stream])
+
+  // acompanha o ciclo de vida da trilha de vídeo: mute = imagem parada
+  useEffect(() => {
+    const track = stream?.getVideoTracks()[0]
+    if (!stream || !track) {
+      setTrackLive(false)
+      return
+    }
+    const update = () => {
+      setTrackLive(track.readyState !== 'ended' && !track.muted)
+    }
+    update()
+    track.addEventListener('mute', update)
+    track.addEventListener('unmute', update)
+    track.addEventListener('ended', update)
+    return () => {
+      track.removeEventListener('mute', update)
+      track.removeEventListener('unmute', update)
+      track.removeEventListener('ended', update)
     }
   }, [stream])
 
@@ -70,10 +95,13 @@ export default function ScreenShareStage({ members }: { members: VoicePeerInfo[]
 
   // status para o usuário final (sem detalhes técnicos)
   let statusText: string | null = null
+  const trackEnded = stream?.getVideoTracks()[0]?.readyState === 'ended'
   if (mine) {
     statusText = '🔴 Compartilhando sua tela'
   } else if (!stream) {
     statusText = 'Conectando…'
+  } else if (trackEnded || !trackLive) {
+    statusText = 'Compartilhamento encerrado'
   } else {
     const cs = screenShareState.connectionState
     if (cs === 'disconnected') statusText = 'Reconectando…'
@@ -93,7 +121,7 @@ export default function ScreenShareStage({ members }: { members: VoicePeerInfo[]
             Parar compartilhamento
           </button>
         )}
-        {stream && (
+        {stream && trackLive && (
           <div className="ss-stage-tools">
             <button
               className="ss-icon-btn"
@@ -117,10 +145,14 @@ export default function ScreenShareStage({ members }: { members: VoicePeerInfo[]
         )}
       </header>
       <div className="ss-stage-body">
-        {stream ? (
+        {stream && trackLive ? (
           <video ref={videoRef} className="ss-video" autoPlay playsInline muted={mine} />
         ) : (
-          !mine && <div className="ss-stage-placeholder">Aguardando o vídeo…</div>
+          !mine && (
+            <div className="ss-stage-placeholder">
+              {stream ? 'Compartilhamento encerrado por quem compartilhava.' : 'Aguardando o vídeo…'}
+            </div>
+          )
         )}
         {mine && stream && <div className="ss-preview-tag">Prévia local</div>}
         {/* parar sempre visível sobre o vídeo — sem precisar procurar */}

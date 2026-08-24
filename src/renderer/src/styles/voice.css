@@ -159,14 +159,15 @@
   color: #fff;
 }
 
-/* tela do canal de voz (layout de chamada estilo Discord) */
+/* tela do canal de voz (layout de chamada): centro livre para
+   vídeo/compartilhamento; participantes e controles no rodapé */
 .voice-call {
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
   padding: 16px;
-  overflow-y: auto;
+  overflow: hidden;
 }
 
 /* ícone do canal no cabeçalho */
@@ -216,16 +217,25 @@
   font-size: 15px;
 }
 
-/* grade de tiles dos participantes */
+/* faixa inferior compacta de participantes: centralizada, lado a lado,
+   empurrada para o rodapé — o centro fica livre para o vídeo/tela */
 .voice-tiles {
-  flex: 1;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  margin-top: auto;
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-end;
   gap: 10px;
-  align-content: start;
+  max-height: min(42vh, 340px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 4px 2px;
 }
 .voice-tile {
   position: relative;
+  flex: 0 0 auto;
+  width: clamp(150px, 17vw, 210px);
   aspect-ratio: 16 / 9;
   background: var(--bg-tile);
   border-radius: 8px;
@@ -336,16 +346,14 @@
   min-width: 0;
 }
 
-/* dock de controles flutuante na base (estilo chamada) */
+/* dock de controles: logo abaixo dos participantes, centralizado */
 .voice-controls-dock {
-  margin-top: auto;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 12px;
-  padding-top: 16px;
-  position: relative;
+  padding-top: 12px;
 }
 .voice-controls-dock .voice-control {
   width: 46px;
@@ -358,36 +366,6 @@
 }
 .voice-controls-dock .voice-control.leave:hover {
   filter: brightness(0.9);
-}
-.voice-controls-dock .voice-control.settings {
-  width: 26px;
-  height: 46px;
-  margin-left: -14px;
-  border-radius: 13px 0 0 13px;
-  background: var(--bg-modifier-hover);
-  color: var(--text-muted);
-}
-.voice-controls-dock .voice-control.settings svg {
-  transition: transform 0.15s;
-}
-.voice-controls-dock .voice-control.settings.open {
-  color: var(--green);
-}
-.voice-controls-dock .voice-control.settings.open svg {
-  transform: rotate(180deg);
-}
-/* popover de configurações de microfone acima do dock */
-.voice-dock-picker {
-  position: absolute;
-  bottom: calc(100% + 12px);
-  left: 50%;
-  transform: translateX(-50%);
-  width: 320px;
-  max-width: calc(100vw - 48px);
-  z-index: 30;
-}
-.voice-dock-picker .mic-picker {
-  width: 100%;
 }
 
 /* indicador de sinal de rede (estilo Discord) */
@@ -622,3 +600,194 @@
   margin-top: 6px;
   line-height: 1.4;
 }
+
+/* ---------- Quem está transmitindo a tela ---------- */
+/* anel roxo ao redor do tile inteiro (distinto do verde de "falando") */
+.voice-tile.sharing {
+  box-shadow: 0 0 0 2px var(--blurple), 0 0 18px rgba(88, 101, 242, 0.35);
+}
+.voice-tile.sharing .voice-tile-name {
+  color: #c9cdfb;
+}
+
+/* ---------- Flags na lista de membros (barra lateral) ---------- */
+.voice-channel-member-flags {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.vflag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 17px;
+  height: 17px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--red);
+}
+
+.vflag.vflag-sharing {
+  color: var(--blurple);
+  background: rgba(88, 101, 242, 0.16);
+}
+
+/* responsivo: telas/janelas estreitas — espaçamentos proporcionais,
+   cards menores sem quebrar o layout, controles sempre acessíveis */
+@media (max-width: 900px) {
+  .voice-call {
+    padding: 10px;
+  }
+  .voice-tiles {
+    gap: 8px;
+    max-height: min(38vh, 300px);
+  }
+  .voice-tile {
+    width: clamp(126px, 32vw, 170px);
+    gap: 8px;
+  }
+  .voice-controls-dock {
+    gap: 8px;
+    padding-top: 8px;
+  }
+  .voice-controls-dock .voice-control {
+    width: 42px;
+    height: 42px;
+  }
+}
+
+/* ---------- Solucionador de problemas de voz ---------- */
+.vts-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.vts-modal {
+  width: 460px;
+  max-width: calc(100vw - 40px);
+  max-height: calc(100vh - 60px);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-secondary);
+  border-radius: 10px;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+}
+.vts-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--bg-modifier-hover);
+}
+.vts-header h3 {
+  font-size: 15px;
+  font-weight: 700;
+}
+.vts-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px;
+}
+.vts-close:hover {
+  color: #fff;
+}
+.vts-body {
+  padding: 12px 16px;
+  overflow-y: auto;
+}
+.vts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.vts-item {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 9px 11px;
+  border-radius: 7px;
+  background: var(--bg-tertiary);
+}
+.vts-item .vts-icon {
+  flex-shrink: 0;
+  width: 20px;
+  text-align: center;
+  font-weight: 700;
+}
+.vts-item.ok .vts-icon { color: var(--green); }
+.vts-item.warn .vts-icon { color: #f0b232; }
+.vts-item.fail .vts-icon { color: var(--red); }
+.vts-item.run .vts-icon { color: var(--text-muted); }
+.vts-item.idle .vts-icon { color: var(--text-muted); }
+.vts-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 13px;
+  min-width: 0;
+}
+.vts-text span {
+  color: var(--text-muted);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+.vts-item.fail .vts-text span { color: var(--text-normal); }
+.vts-tone {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.vts-hint {
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+.vts-verdict {
+  display: inline-flex;
+  gap: 6px;
+}
+.vts-vote {
+  background: var(--bg-modifier-active);
+  color: var(--text-normal);
+  border: none;
+  border-radius: 6px;
+  padding: 5px 12px;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.vts-vote:hover { filter: brightness(1.2); }
+.vts-vote.yes { background: var(--green); color: #062; }
+.vts-vote.no.sel { background: var(--red); color: #fff; }
+.vts-fix {
+  margin-top: 12px;
+  width: 100%;
+}
+.vts-footer {
+  padding: 12px 16px;
+  border-top: 1px solid var(--bg-modifier-hover);
+  display: flex;
+  justify-content: flex-end;
+}
+.mic-picker-troubleshoot {
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--blurple);
+  font-size: 12.5px;
+  cursor: pointer;
+  text-align: left;
+  padding: 2px 0;
+}
+.mic-picker-troubleshoot:hover { text-decoration: underline; }
