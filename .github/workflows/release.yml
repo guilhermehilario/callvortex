@@ -65,11 +65,19 @@ jobs:
         shell: bash
 
       - uses: actions/upload-artifact@v4
-        if: always()
+        if: always() && matrix.os == 'windows-latest'
         with:
-          name: CallVortex-${{ matrix.os }}-${{ github.run_number }}
+          name: CallVortex-windows-${{ github.run_number }}
           path: |
             release/*.exe
+            release/latest*.yml
+          if-no-files-found: warn
+
+      - uses: actions/upload-artifact@v4
+        if: always() && matrix.os == 'ubuntu-latest'
+        with:
+          name: CallVortex-linux-${{ github.run_number }}
+          path: |
             release/*.AppImage
             release/latest*.yml
-          if-no-files-found: error
+          if-no-files-found: warn
