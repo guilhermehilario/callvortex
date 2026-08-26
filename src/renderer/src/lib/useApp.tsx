@@ -154,10 +154,10 @@ export function AppProvider({ children }: { children: React.ReactNode }): React.
         const p = await api.fetchProfile(user.id)
         if (cancelled) return
         setProfile(p)
-        const [s, d] = await Promise.all([api.fetchMyServers(), api.fetchDmThreads()])
+        const [srvRes, dmRes] = await Promise.allSettled([api.fetchMyServers(), api.fetchDmThreads()])
         if (cancelled) return
-        setServers(s)
-        setDms(d)
+        setServers(srvRes.status === 'fulfilled' ? srvRes.value : [])
+        setDms(dmRes.status === 'fulfilled' ? dmRes.value : [])
         setDataReady(true)
       } catch (e) {
         notify('error', e instanceof Error ? e.message : 'Erro ao carregar dados')
