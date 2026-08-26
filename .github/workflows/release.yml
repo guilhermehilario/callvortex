@@ -44,6 +44,7 @@ jobs:
 
       - name: Trava — sem credenciais, não publica build quebrado
         if: matrix.os == 'windows-latest'
+        shell: bash
         run: |
           if [ -z "${VITE_SUPABASE_URL:-}" ] || [ -z "${VITE_SUPABASE_ANON_KEY:-}" ]; then
             echo "::error::Credenciais ausentes! Configure as Variables/Secrets VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY em Settings > Secrets and variables > Actions."
