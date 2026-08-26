@@ -32,7 +32,26 @@ jobs:
 
       - name: Build (renderer/main)
         run: yarn build
+        env:
+          # Configure UMA VEZ no repositório:
+          #   Settings > Secrets and variables > Actions > Variables:
+          #     VITE_SUPABASE_URL
+          #   Secrets:
+          #     VITE_SUPABASE_ANON_KEY
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
         shell: bash
+
+      - name: Trava — sem credenciais, não publica build quebrado
+        if: matrix.os == 'windows-latest'
+        run: |
+          if [ -z "${VITE_SUPABASE_URL:-}" ] || [ -z "${VITE_SUPABASE_ANON_KEY:-}" ]; then
+            echo "::error::Credenciais ausentes! Configure as Variables/Secrets VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY em Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
 
       # Versão monotônica por número de execução → o electron-updater
       # sempre enxerga a nova como mais recente.

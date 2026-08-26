@@ -1,14 +1,10 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
-// Padrão embutido: projeto hospedado que o app sempre usou. A anon key é
-// pública por design (o RLS protege os dados) e já viaja dentro de todo
-// .exe distribuído — mantê-la aqui garante que builds da CI funcionem sem
-// nenhum arquivo .env. Para apontar a outro projeto, defina as variáveis
-// VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY no build.
-const url = import.meta.env.VITE_SUPABASE_URL || '[URL_REMOVIDA]'
-const anonKey =
-  import.meta.env.VITE_SUPABASE_ANON_KEY ||
-  '[KEY_REMOVIDA]'
+// Credenciais vêm EXCLUSIVAMENTE do ambiente de build (.env local ou
+// Variables/Secrets do repositório na CI) — nenhum valor sensível vive no
+// código-fonte, que é público.
+const url = import.meta.env.VITE_SUPABASE_URL
+const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 export const supabaseReady = Boolean(url && anonKey)
 
