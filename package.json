@@ -4,7 +4,7 @@
   "description": "Chat por texto e voz para conversar com amigos",
   "main": "out/main/index.js",
   "scripts": {
-    "dev": "electron-vite dev",
+    "dev": "node scripts/ensure-electron.mjs && electron-vite dev",
     "build": "electron-vite build",
     "start": "electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
