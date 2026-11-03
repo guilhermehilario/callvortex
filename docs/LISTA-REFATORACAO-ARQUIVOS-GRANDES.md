@@ -42,7 +42,7 @@
 
 - [ ] `pnpm install` validado na branch `fix/fixing-pnpm-electron` (lockfile verde)
 - [ ] Portar padronização pnpm + docs/ para `develop`
-- [ ] `git rm --cached tsconfig.web.tsbuildinfo` + entrada no `.gitignore`
+- [x] `git rm --cached tsconfig.web.tsbuildinfo` + entrada no `.gitignore` — ✅ commit `51b7c7e`
 
 ## Fase 1 — módulos folha de `api.ts` (baixo risco)
 
