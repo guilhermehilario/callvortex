@@ -366,7 +366,7 @@ src/
 ### Build e Dev
 - **electron-vite**: Build tool para Electron + Vite
 - **TypeScript**: Tipagem em toda a aplicação
-- **Hot reload**: Desenvolvimento com `yarn dev`
+- **Hot reload**: Desenvolvimento com `pnpm dev`
 
 ---
 
@@ -407,11 +407,11 @@ src/
 - **Auto-updater**: `electron-updater` configurado com GitHub Releases
 
 ### Scripts
-- `yarn dev`: Desenvolvimento
-- `yarn build`: Build
-- `yarn dist`: Gerar instalador
-- `yarn typecheck`: Verificação TypeScript
-- `yarn test:e2e`: Testes E2E
+- `pnpm dev`: Desenvolvimento
+- `pnpm build`: Build
+- `pnpm dist`: Gerar instalador
+- `pnpm typecheck`: Verificação TypeScript
+- `pnpm test:e2e`: Testes E2E
 
 ### Distribuição
 - Banco compartilhado via Supabase (mesmo projeto)

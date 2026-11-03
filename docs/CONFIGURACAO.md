@@ -41,10 +41,10 @@ VITE_SUPABASE_ANON_KEY=sua-chave-copiada-aqui
 ```
 
 - O `.env` **não vai para o git** (está no `.gitignore`).
-- Em desenvolvimento (`yarn dev`), o app lê esse arquivo a cada execução.
+- Em desenvolvimento (`pnpm dev`), o app lê esse arquivo a cada execução.
 - **Se você usa o instalador `.exe`** (da pasta `release/`), as chaves ficam
   gravadas dentro do executável no momento do build. Nesse caso, depois de
-  corrigir o `.env`, rode `yarn dist` de novo para gerar um `.exe` novo.
+  corrigir o `.env`, rode `pnpm dist` de novo para gerar um `.exe` novo.
 
 > 🔎 Uma chave **anon/publishable real** tem ~200 caracteres ou mais (formato
 > `eyJ...` ou `sb_publishable_...`). Se a sua chave tem 48 caracteres ou a URL
@@ -72,14 +72,14 @@ Com o `.env` preenchido, rode os SQLs no painel do Supabase:
 ## 4. Rodando o app
 
 ```bash
-yarn install      # só na primeira vez
-yarn dev      # abre o app em modo desenvolvimento
+pnpm install      # só na primeira vez
+pnpm dev      # abre o app em modo desenvolvimento
 ```
 
 Para gerar o instalador para os amigos:
 
 ```bash
-yarn dist     # gera o .exe na pasta release/
+pnpm dist     # gera o .exe na pasta release/
 ```
 
 ---

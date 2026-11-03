@@ -35,7 +35,7 @@ Chat por texto e voz em tempo real com seus amigos. Desktop (Electron + React + 
 ### 1. Criar o projeto Supabase (grátis)
 
 1. Crie um projeto em [supabase.com](https://supabase.com).
-2. **Onde encontrar as chaves:** leia o guia **`CONFIGURACAO.md`** na raiz do projeto — ele mostra passo a passo onde ficam o *Project URL* e a *publishable/anon key* no painel atual do Supabase (Settings → API Keys).
+2. **Onde encontrar as chaves:** leia o guia **`docs/CONFIGURACAO.md`** — ele mostra passo a passo onde ficam o *Project URL* e a *publishable/anon key* no painel atual do Supabase (Settings → API Keys).
 3. Copie o arquivo `.env.example` para `.env` e preencha:
 
 ```
@@ -48,8 +48,8 @@ VITE_SUPABASE_ANON_KEY=sua-anon-key
 ### 2. Instalar e rodar
 
 ```bash
-yarn install
-yarn dev
+pnpm install
+pnpm dev
 ```
 
 O app abre em uma janela desktop. Crie sua conta e convide os amigos!
@@ -57,28 +57,25 @@ O app abre em uma janela desktop. Crie sua conta e convide os amigos!
 ## Empacotar para distribuir (Windows)
 
 ```bash
-yarn dist
+pnpm dist
 ```
 
 Gera um instalador e uma versão portátil na pasta `release/`. Seus amigos precisarão apenas instalar e criar conta — o banco é compartilhado via Supabase.
 
 ## 📚 Documentação
 
-- **`docs/GUIA-RAPIDO.md`** — ⭐ do zero até conversar com o amigo (comece aqui)
-- **`docs/ESTADO-DO-PROJETO.md`** — o que está implementado e verificado
-- **`docs/RESOLUCAO-DE-PROBLEMAS.md`** — todos os erros já encontrados e como resolver
-- **`docs/DESATIVAR-CONFIRMACAO-EMAIL.md`** — passo a passo (4 passos) para desligar a confirmação de e-mail e resolver o erro "email rate limit exceeded" ao criar conta
-- **`CONFIGURACAO.md`** — onde achar as chaves do Supabase e preencher o `.env`
-- **`ATUALIZAR-SUPABASE.md`** — ⬆️ como aplicar as mudanças novas no Supabase sem perder os dados já salvos
-- **`docs/COMO-FUNCIONA.md`** — análise da arquitetura (nuvem vs P2P, papel do criador/host)
-- **`docs/GUIA-DO-CRIADOR.md`** — passo a passo para você criar a sala e enviar o `.exe` ao amigo
-- **`docs/GUIA-DO-AMIGO.md`** — o que o amigo precisa fazer (abrir o `.exe`, criar conta, entrar pelo código)
-- **`docs/SELF-HOSTED.md`** — opção avançada: sua máquina como servidor de verdade (Docker/LAN/túnel)
-- **`docs/GUIA-LINUX.md`** — 🐧 rodar ou gerar pacotes (`.AppImage`/`.deb`) no Ubuntu/Debian (use o `rodar-linux.sh`)
+- **`docs/PLANO-REFACTOR-ARQUITETURA.md`** — 🔍 diagnóstico da arquitetura (arquivos maiores que 280 linhas), código morto e plano de reorganização por fases
+- **`docs/LISTA-REFATORACAO-ARQUIVOS-GRANDES.md`** — 📋 backlog executável da refatoração (checklist de PRs por fase)
+- **`CONTRIBUTING.md`** — fluxo de branches (`main`/`homologacao`/`develop`), proteções e Conventional Commits
+- **`docs/CONTEXTO_PROJETO_PARA_IA.md`** — contexto atualizado do projeto (para agentes de IA e novos devs)
+- **`docs/DOCUMENTACAO_COMPLETA_FUNCIONALIDADES.md`** — catálogo completo de funcionalidades implementadas
+- **`docs/CONFIGURACAO.md`** — onde achar as chaves do Supabase e preencher o `.env`
+- **`docs/ATUALIZAR-SUPABASE.md`** — ⬆️ como aplicar as mudanças novas no Supabase sem perder os dados já salvos
 
 ## Estrutura
 
 ```
+docs/         Documentação do projeto (setup, plano de refactor, contexto)
 src/
   main/        Processo principal do Electron
   preload/     Ponte de segurança (contextBridge)

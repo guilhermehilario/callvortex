@@ -384,15 +384,15 @@ Sticker {
 
 ```bash
 # Desenvolvimento
-yarn install
-yarn dev
+pnpm install
+pnpm dev
 
 # Verificação
-yarn typecheck
+pnpm typecheck
 
 # Build/Distribuição
-yarn build
-yarn dist
+pnpm build
+pnpm dist
 ```
 
 ## Notas

@@ -103,7 +103,7 @@ No chat, abra o painel 😀 → seção **Figurinhas e GIFs** → clique para in
 ### ✅ Já aplicado (23/08/2026)
 
 Este projeto **já tem** o compartilhamento de tela aplicado no Supabase
-via CLI (`yarn supabase db push`). Foram 4 migrações, na ordem:
+via CLI (`pnpm supabase db push`). Foram 4 migrações, na ordem:
 
 1. `20260823120000_screen_share.sql` — tabelas, funções, RLS e publicação
 2. `20260823131000_screen_share_fixes.sql` — grants de tabela + heartbeat com `clock_timestamp()`
@@ -112,7 +112,7 @@ via CLI (`yarn supabase db push`). Foram 4 migrações, na ordem:
 5. `20260824000000_realtime_private_voice.sql` — **segurança da voz**: política RLS em `realtime.messages` restringe o tópico `voice:<channel_id>` a membros do servidor (portável entre versões do Realtime: detecta `channel_name`/`topic`)
 
 **Ordem de ativação da 5ª (canais privados):**
-   1. Aplique a migração (`yarn supabase db push` ou SQL Editor).
+   1. Aplique a migração (`pnpm supabase db push` ou SQL Editor).
    2. No painel: **Realtime → Settings → "Allow private channels" = ON**.
    3. Só então defina `VITE_REALTIME_PRIVATE=1` no `.env` e gere build novo.
       Enquanto o flag estiver desligado, o app funciona como hoje — mas com
@@ -129,7 +129,7 @@ A migração 4 muda três funções (todas idempotentes):
 
 Se você estiver configurando **outro projeto** (ex.: recriar na outra
 máquina), rode as quatro na ordem acima — todas idempotentes — ou use
-`yarn supabase db push` com o projeto vinculado.
+`pnpm supabase db push` com o projeto vinculado.
 
 ---
 
@@ -150,8 +150,8 @@ vez e depois as migrações).
 
 ## 4. Depois de atualizar
 
-- **Desenvolvimento** (`yarn dev`): reinicie o app e pronto.
-- **Instalador `.exe`**: rode `yarn dist` para gerar um executável novo
+- **Desenvolvimento** (`pnpm dev`): reinicie o app e pronto.
+- **Instalador `.exe`**: rode `pnpm dist` para gerar um executável novo
   com as correções (as chaves ficam gravadas dentro do executável no momento
   do build).
 
