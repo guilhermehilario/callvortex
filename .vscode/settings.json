@@ -1,0 +1,12 @@
+{
+  // Geração de mensagem de commit pelo Copilot (botão ✨ no painel do Source Control).
+  // Segue o padrão obrigatório do repositório: CONTRIBUTING.md §4 (Conventional Commits).
+  "github.copilot.chat.commitMessageGeneration": {
+    "instructions": [
+      { "file": "CONTRIBUTING.md" },
+      {
+        "text": "Escreva a mensagem de commit em português (pt-BR), no formato Conventional Commits: `<tipo>(escopo opcional): descrição em modo imperativo, curta, minúscula, sem ponto final`. Tipos permitidos: feat, fix, refactor, docs, chore, test, ci, style, perf. Escopos sugeridos: voice, screenshare, chat, sidebar, members, srv (servidores), api, auth, ipc (main/preload), ui, db (supabase). Primeira linha curta (até ~72 caracteres); o corpo (opcional) explica o porquê em uma ou duas frases. Commits pequenos e atômicos: uma mensagem descreve somente o que está staged."
+      }
+    ]
+  }
+}
