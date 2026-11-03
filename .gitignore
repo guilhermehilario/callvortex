@@ -17,3 +17,5 @@ backup/storage/
 release-windows
 release.zip
 release-*.zip
+
+*.tsbuildinfo
