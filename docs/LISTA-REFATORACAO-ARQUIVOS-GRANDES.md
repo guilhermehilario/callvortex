@@ -46,7 +46,7 @@
 
 ## Fase 1 — módulos folha de `api.ts` (baixo risco)
 
-- [ ] Criar `lib/api/errors.ts` + constantes compartilhadas; `api.ts` reexporta
+- [x] Criar `lib/api/errors.ts` + constantes compartilhadas; `api.ts` importa (`err`/`friendlyError` movidos — não havia constantes compartilhadas no módulo) — ✅ commit `4da2ea6`
 - [ ] Split dos 8 domínios em `lib/api/*.ts` (auth, channels, messages, members, roles, invites, stickers, realtime helpers) — 1 domínio por PR
 - [ ] Remover imports/variáveis mortas mapeados no §2.2 do plano (PR próprio de limpeza)
 
